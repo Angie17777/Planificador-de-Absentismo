@@ -1,0 +1,2894 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Planificador de Absentismo</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <style>
+    :root{
+      --bg:#f5f8fc;--card:#ffffff;--primary:#075985;--primary2:#0ea5e9;--ink:#0f172a;--muted:#64748b;
+      --line:#dbe7f3;--soft:#eaf6ff;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 18px 45px rgba(15,23,42,.08);
+    }
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:linear-gradient(135deg,#f8fbff,#edf6ff);color:var(--ink)}
+    .wrap{max-width:1240px;margin:auto;padding:28px}
+    .hero{background:linear-gradient(135deg,#ffffff,#eaf6ff);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:var(--shadow);display:flex;justify-content:space-between;gap:24px;align-items:center}
+    .hero h1{margin:0;color:#083344;font-size:30px}.hero p{margin:8px 0 0;color:var(--muted)}
+    .pill{display:inline-flex;gap:8px;align-items:center;background:#e0f2fe;color:#075985;border:1px solid #bae6fd;padding:8px 12px;border-radius:999px;font-weight:700;font-size:13px}
+    .practice-screen{margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .practice{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px;box-shadow:var(--shadow);cursor:pointer;transition:.2s}
+    .practice:hover{transform:translateY(-3px);border-color:#7dd3fc}
+    .practice h2{margin:0 0 8px;color:#075985}.practice p{color:var(--muted);margin:0}
+    
+    .landing-hero{
+      position:relative;
+      overflow:hidden;
+      min-height:250px;
+      background:
+        radial-gradient(circle at 82% 18%,rgba(14,165,233,.22),transparent 32%),
+        radial-gradient(circle at 12% 88%,rgba(7,89,133,.14),transparent 34%),
+        linear-gradient(135deg,#ffffff 0%,#eef8ff 50%,#dff3ff 100%);
+      border:1px solid #cfe8fb;
+    }
+    .landing-hero:before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background-image:
+        linear-gradient(rgba(14,165,233,.08) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(14,165,233,.08) 1px,transparent 1px);
+      background-size:34px 34px;
+      mask-image:linear-gradient(90deg,#000,transparent 78%);
+      pointer-events:none;
+    }
+    .hero-copy{position:relative;z-index:2;max-width:720px}
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      color:#0369a1;
+      background:#e0f2fe;
+      border:1px solid #bae6fd;
+      border-radius:999px;
+      padding:7px 11px;
+      font-size:12px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      margin-bottom:13px;
+    }
+    .landing-hero h1{
+      font-size:38px;
+      line-height:1.05;
+      letter-spacing:-.04em;
+      color:#082f49;
+    }
+    .landing-hero p{
+      font-size:15px;
+      max-width:640px;
+    }
+    .hero-chips{
+      display:flex;
+      gap:9px;
+      flex-wrap:wrap;
+      margin-top:16px;
+    }
+    .hero-chips span{
+      background:#fff;
+      color:#075985;
+      border:1px solid #cdeafe;
+      box-shadow:0 8px 18px rgba(14,165,233,.08);
+      border-radius:999px;
+      padding:8px 11px;
+      font-weight:850;
+      font-size:12px;
+    }
+    .hero-visual{
+      position:relative;
+      width:300px;
+      min-height:185px;
+      flex:0 0 300px;
+      z-index:1;
+    }
+    .orb{
+      position:absolute;
+      border-radius:999px;
+      filter:blur(.2px);
+    }
+    .orb-one{
+      width:150px;height:150px;
+      right:20px;top:8px;
+      background:linear-gradient(135deg,#0ea5e9,#075985);
+      opacity:.18;
+    }
+    .orb-two{
+      width:76px;height:76px;
+      right:172px;bottom:12px;
+      background:#38bdf8;
+      opacity:.22;
+    }
+    .mini-dashboard{
+      position:absolute;
+      right:8px;
+      top:26px;
+      width:210px;
+      background:rgba(255,255,255,.82);
+      backdrop-filter:blur(12px);
+      border:1px solid rgba(186,230,253,.9);
+      border-radius:22px;
+      padding:16px;
+      box-shadow:0 24px 55px rgba(7,89,133,.18);
+      transform:rotate(-2deg);
+    }
+    .mini-row{
+      display:flex;justify-content:space-between;gap:12px;margin-bottom:10px;
+    }
+    .mini-row span{height:10px;width:96px;border-radius:999px;background:#dff3ff}
+    .mini-row b{height:10px;width:42px;border-radius:999px;background:#0ea5e9}
+    .mini-row.short span{width:72px}.mini-row.short b{background:#075985}
+    .mini-calendar{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:7px;
+      margin-top:12px;
+    }
+    .mini-calendar i{
+      height:34px;
+      border-radius:10px;
+      background:#f1f8ff;
+      border:1px solid #dbeafe;
+    }
+    .mini-calendar i.active{
+      background:linear-gradient(135deg,#075985,#0ea5e9);
+      box-shadow:0 8px 15px rgba(14,165,233,.25);
+    }
+    .mini-calendar i.soft{background:#e0f2fe}
+    .landing-practices{
+      grid-template-columns:1fr 1fr;
+      align-items:stretch;
+      position:relative;
+    }
+    .landing-title{
+      grid-column:1/-1;
+      background:#ffffff;
+      border:1px solid #dbe7f3;
+      border-radius:20px;
+      padding:18px 20px;
+      box-shadow:0 14px 34px rgba(15,23,42,.06);
+    }
+    .landing-title span{
+      color:#0284c7;
+      text-transform:uppercase;
+      letter-spacing:.09em;
+      font-size:12px;
+      font-weight:900;
+    }
+    .landing-title h2{
+      margin:5px 0 4px;
+      color:#083344;
+      font-size:24px;
+      letter-spacing:-.03em;
+    }
+    .landing-title p{
+      margin:0;
+      color:#64748b;
+      font-size:14px;
+    }
+    .practice-card{
+      position:relative;
+      overflow:hidden;
+      padding:24px;
+      min-height:210px;
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      background:
+        linear-gradient(135deg,#ffffff 0%,#f8fbff 58%,#eaf6ff 100%);
+    }
+    .practice-card:before{
+      content:"";
+      position:absolute;
+      width:180px;height:180px;
+      border-radius:999px;
+      right:-70px;top:-70px;
+      background:linear-gradient(135deg,#0ea5e9,#075985);
+      opacity:.10;
+      transition:.2s;
+    }
+    .practice-card:hover:before{transform:scale(1.08);opacity:.15}
+    .practice-card:hover{
+      transform:translateY(-5px);
+      border-color:#38bdf8;
+      box-shadow:0 24px 54px rgba(14,165,233,.16);
+    }
+    .practice-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      position:relative;
+      z-index:1;
+    }
+    .practice-icon{
+      width:48px;height:48px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:16px;
+      background:linear-gradient(135deg,#075985,#0ea5e9);
+      color:#fff;
+      font-weight:950;
+      box-shadow:0 12px 24px rgba(14,165,233,.22);
+    }
+    .practice-tag{
+      border:1px solid #bae6fd;
+      background:#eff8ff;
+      color:#075985;
+      border-radius:999px;
+      padding:6px 10px;
+      font-size:12px;
+      font-weight:900;
+    }
+    .practice-card h2{
+      font-size:25px;
+      letter-spacing:-.03em;
+      margin:18px 0 8px;
+      position:relative;
+      z-index:1;
+    }
+    .practice-card p{
+      font-size:14px;
+      line-height:1.45;
+      position:relative;
+      z-index:1;
+      max-width:420px;
+    }
+    .practice-footer{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-top:18px;
+      padding-top:15px;
+      border-top:1px solid #e6eef6;
+      color:#075985;
+      font-weight:900;
+      position:relative;
+      z-index:1;
+    }
+    .practice-footer b{
+      width:34px;height:34px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:12px;
+      background:#e0f2fe;
+      color:#075985;
+      transition:.2s;
+    }
+    .practice-card:hover .practice-footer b{
+      background:#075985;color:#fff;transform:translateX(3px);
+    }
+
+    .app{display:none;margin-top:22px}.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:16px}
+    .btn{border:0;background:linear-gradient(135deg,#0369a1,#0ea5e9);color:white;border-radius:12px;padding:11px 15px;font-weight:800;cursor:pointer}
+    .btn.secondary{background:#e2edf7;color:#075985}.btn.danger{background:#fee2e2;color:#991b1b}.btn.ok{background:#dcfce7;color:#166534}.btn.warn{background:#fef3c7;color:#92400e}
+    .layout{display:grid;grid-template-columns:365px 1fr;gap:18px;align-items:start}.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow);align-self:start}
+    label{display:block;font-weight:800;color:#164e63;font-size:13px;margin:13px 0 6px}
+    input,select,textarea{width:100%;border:1px solid #cfe0ee;border-radius:12px;padding:11px;background:#fff;color:var(--ink);font-size:14px}
+    input:focus,select:focus,textarea:focus{outline:3px solid #bae6fd;border-color:#38bdf8}
+    textarea{min-height:72px;resize:vertical}.hint{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4}.notice{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;border-radius:14px;padding:12px;margin-top:12px;font-size:13px;display:none}
+    .days-box{margin-top:12px;background:linear-gradient(135deg,#e0f2fe,#f8fbff);border:1px solid #bae6fd;border-radius:16px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .days-box span{color:#075985;font-weight:900;font-size:13px}
+    .days-box strong{font-size:30px;color:#0369a1;line-height:1}
+    .days-box small{display:block;color:#64748b;font-weight:700;margin-top:3px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.tab{background:#eef6ff;color:#075985;border:1px solid #cdeafe;padding:10px 13px;border-radius:12px;font-weight:800;cursor:pointer}.tab.active{background:#075985;color:#fff}
+    .panel{display:none}.panel.active{display:block}
+    .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}.kpi{background:#f8fbff;border:1px solid var(--line);border-radius:16px;padding:14px}.kpi small{color:var(--muted);font-weight:700}.kpi strong{display:block;font-size:24px;color:#075985;margin-top:5px}.kpi-click{cursor:pointer;transition:.18s}.kpi-click:hover{transform:translateY(-2px);border-color:#7dd3fc;box-shadow:0 14px 28px rgba(14,165,233,.13)}
+    table{width:100%;border-collapse:collapse;font-size:13px} th{background:#075985;color:#fff;text-align:left;padding:10px}td{border-bottom:1px solid #e6eef6;padding:10px;vertical-align:top}tr:hover td{background:#f8fbff}
+    .status{display:inline-block;padding:5px 9px;border-radius:999px;font-weight:800;font-size:12px}.Pendiente{background:#fef3c7;color:#92400e}.Aprobado{background:#dcfce7;color:#166534}.Rechazado{background:#fee2e2;color:#991b1b}
+    .cal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}.dayname{font-size:12px;font-weight:900;color:#075985;text-align:center}.day{min-height:88px;background:#fff;border:1px solid #e2edf7;border-radius:12px;padding:8px;font-size:12px;overflow:hidden}.day .num{font-weight:900;color:#164e63}.holiday{background:#fff7ed;border-color:#fed7aa}.vac{margin-top:4px;border-radius:8px;padding:3px 5px;background:#e0f2fe;color:#075985;font-weight:700;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .vac.approved{background:#0369a1;color:#fff;border-left:4px solid #22c55e}
+    .day.has-approved{background:linear-gradient(180deg,#eff6ff,#dff3ff);border:2px solid #38bdf8;box-shadow:0 8px 20px rgba(14,165,233,.16)}
+    .legend{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0 14px;color:#64748b;font-size:12px;font-weight:700}
+    .legend i{width:14px;height:14px;border-radius:4px;display:inline-block;background:#0369a1;border-left:4px solid #22c55e}
+    .alert-row{background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;padding:13px;margin-bottom:10px;color:#9a3412}
+    @media(max-width:960px){.layout,.practice-screen{grid-template-columns:1fr}.kpis{grid-template-columns:1fr}.hero{display:block}.hero-visual{display:none}.landing-hero h1{font-size:31px}.landing-practices{grid-template-columns:1fr}}
+  
+    .sol-subtabs{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px;padding:8px;background:#f8fbff;border:1px solid #dbeafe;border-radius:16px}
+    .sol-subtab{border:1px solid #cfe8fb;background:#fff;color:#075985;border-radius:999px;padding:9px 13px;font-weight:900;cursor:pointer}
+    .sol-subtab.active{background:linear-gradient(135deg,#075985,#0ea5e9);color:#fff;border-color:transparent;box-shadow:0 8px 18px rgba(14,165,233,.18)}
+    .sol-subtab span{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;margin-left:6px;border-radius:999px;background:#e0f2fe;color:#075985;font-size:12px}
+    .sol-subtab.active span{background:rgba(255,255,255,.22);color:#fff}
+    .date-cell{white-space:nowrap;line-height:1.45;color:#334155}
+    .date-cell .date-line{display:block;font-weight:800}
+    .date-cell .date-label{display:inline-block;width:54px;color:#64748b;font-weight:800}
+    .actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .actions .btn{padding:6px 9px;border-radius:9px;font-size:12px;line-height:1;box-shadow:none}
+    .state-pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:6px 9px;font-size:12px;font-weight:900}
+    .state-ok{background:#ecfdf5;color:#166534;border:1px solid #bbf7d0}
+    .state-no{background:#fff1f2;color:#991b1b;border:1px solid #fecdd3}
+    .empty-state{padding:22px;text-align:center;color:#64748b;background:#f8fbff;border:1px dashed #cfe8fb;border-radius:14px}
+    .day.weekend{background:#f8fafc;color:#94a3b8}
+    .day.weekend .num{color:#94a3b8}
+    .vac.approved{background:#f8fcff!important;color:#075985!important;border:1px solid #b7e4ff!important;border-left:4px solid #0284c7!important;box-shadow:none!important;padding:4px 6px!important;font-size:10.5px!important}
+    .vac.approved:before{content:'●';color:#0284c7;margin-right:4px;font-size:8px;vertical-align:1px}
+    .more-vac{margin-top:4px;font-size:10px;color:#0369a1;background:#e0f2fe;border-radius:999px;padding:3px 6px;display:inline-block;font-weight:900}
+
+    .type-selector{display:grid;grid-template-columns:1fr;gap:8px;margin:8px 0 14px}
+    .type-option{position:relative;display:flex;align-items:center;gap:12px;border:1px solid #dbeafe;background:linear-gradient(135deg,#ffffff,#f8fbff);border-radius:16px;padding:12px 13px;cursor:pointer;transition:.18s;box-shadow:0 8px 18px rgba(15,23,42,.04)}
+    .type-option:hover{border-color:#7dd3fc;transform:translateY(-1px)}
+    .type-option input{position:absolute;opacity:0;pointer-events:none}
+    .type-mark{width:18px;height:18px;border-radius:50%;border:2px solid #93c5fd;background:#fff;display:inline-block;flex:0 0 auto}
+    .type-copy{display:flex;flex-direction:column;gap:2px}
+    .type-copy strong{font-size:13px;color:#0f3d5e}
+    .type-copy small{font-size:11px;color:#64748b;font-weight:700}
+    .type-option:has(input:checked){border-color:#0284c7;background:linear-gradient(135deg,#eff6ff,#e0f2fe);box-shadow:0 10px 22px rgba(14,165,233,.16)}
+    .type-option:has(input:checked) .type-mark{border-color:#0284c7;background:radial-gradient(circle at center,#0284c7 0 42%,#fff 45%)}
+    .type-option.active{border-color:#0284c7;background:linear-gradient(135deg,#eff6ff,#e0f2fe);box-shadow:0 10px 22px rgba(14,165,233,.16)}
+    .type-option.active .type-mark{border-color:#0284c7;background:radial-gradient(circle at center,#0284c7 0 42%,#fff 45%)}
+    
+    .backup-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-top:4px}
+    .backup-block{background:#f8fbff;border:1px solid #dbeafe;border-radius:14px;padding:10px}
+    .backup-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#075985;font-weight:900;margin-bottom:6px}
+    .pending-badge{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 7px;border-radius:999px;background:#e0f2fe;color:#075985;border:1px solid #bae6fd;font-size:12px;font-weight:900;margin-left:6px}
+    .edit-banner{display:none;margin-bottom:12px;background:#eff6ff;border:1px solid #bae6fd;color:#075985;border-radius:14px;padding:10px;font-size:12px;font-weight:800}
+    .btn.edit{background:#e0f2fe;color:#075985;border:1px solid #bae6fd}
+
+    .tab .tab-count{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;margin-left:6px;padding:0 7px;border-radius:999px;background:#e0f2fe;color:#075985;border:1px solid #bae6fd;font-size:12px;font-weight:900}
+    .tab.active .tab-count{background:rgba(255,255,255,.22);color:#fff;border-color:rgba(255,255,255,.35)}
+    .actions{display:grid!important;grid-template-columns:repeat(2,minmax(76px,1fr));gap:6px;min-width:170px}
+    .actions .btn{display:inline-flex;align-items:center;justify-content:center;min-height:30px;padding:7px 9px!important;border-radius:10px!important;font-size:12px!important;line-height:1!important;white-space:nowrap}
+    .actions .state-pill{grid-column:1/-1;justify-content:center}
+    .btn.edit{background:#e0f2fe!important;color:#075985!important;border:1px solid #bae6fd!important}
+    .btn.edit::before{content:"";width:10px;height:10px;margin-right:5px;border-radius:2px;background:linear-gradient(135deg,#075985,#0ea5e9);clip-path:polygon(0 70%,70% 0,100% 30%,30% 100%,0 100%)}
+
+    /* Selector de fechas propio: fechas pasadas, fines de semana y festivos en gris y no seleccionables */
+    .custom-datepicker{
+      position:absolute;
+      z-index:9999;
+      width:310px;
+      background:#fff;
+      border:1px solid #cfe0ee;
+      border-radius:18px;
+      box-shadow:0 22px 55px rgba(15,23,42,.18);
+      overflow:hidden;
+      user-select:none;
+    }
+    .dp-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:12px;
+      background:linear-gradient(135deg,#075985,#0ea5e9);
+      color:#fff;
+    }
+    .dp-head button{
+      width:34px;height:34px;border:0;border-radius:10px;
+      background:rgba(255,255,255,.18);color:#fff;font-weight:900;cursor:pointer;
+    }
+    .dp-title{font-weight:900;text-transform:capitalize;font-size:14px}
+    .dp-grid{
+      display:grid;
+      grid-template-columns:repeat(7,1fr);
+      gap:4px;
+      padding:10px;
+      background:#fff;
+    }
+    .dp-week{
+      color:#075985;
+      font-size:11px;
+      font-weight:900;
+      text-align:center;
+      padding:5px 0;
+      background:#f0f9ff;
+      border-radius:8px;
+    }
+    .dp-day,.dp-empty{
+      height:34px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:10px;
+      font-size:13px;
+      font-weight:800;
+    }
+    .dp-day{
+      cursor:pointer;
+      color:#0f172a;
+      border:1px solid transparent;
+    }
+    .dp-day:hover{
+      background:#e0f2fe;
+      border-color:#7dd3fc;
+      color:#075985;
+    }
+    .dp-day.today{
+      background:#e0f2fe;
+      border-color:#38bdf8;
+      color:#075985;
+    }
+    .dp-day.selected{
+      background:linear-gradient(135deg,#0369a1,#0ea5e9);
+      color:#fff;
+      border-color:#0284c7;
+    }
+    .dp-day.disabled{
+      background:#f1f5f9;
+      color:#94a3b8;
+      border-color:#e2e8f0;
+      cursor:not-allowed;
+      opacity:1;
+    }
+    .dp-day.disabled:hover{
+      background:#f1f5f9;
+      color:#94a3b8;
+      border-color:#e2e8f0;
+    }
+    .dp-day.holiday{
+      background:#fff7ed;
+      color:#b45309;
+      border-color:#fed7aa;
+    }
+    .dp-day.holiday.disabled{
+      background:#fff7ed;
+      color:#b45309;
+      opacity:.72;
+    }
+    .dp-foot{
+      padding:10px 12px;
+      border-top:1px solid #e2edf7;
+      background:#f8fbff;
+      color:#64748b;
+      font-size:11px;
+      font-weight:800;
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+    }
+    .dp-dot{width:10px;height:10px;border-radius:3px;background:#f1f5f9;border:1px solid #e2e8f0;display:inline-block}
+    .dp-dot.h{background:#fff7ed;border-color:#fed7aa}
+
+    .dp-head button{position:relative;z-index:2}
+    .dp-day[data-date]{position:relative}
+
+    /* Acciones más limpias y tipo toolbar */
+    .actions{
+      display:grid!important;
+      grid-template-columns:repeat(2,minmax(78px,1fr));
+      gap:7px!important;
+      min-width:172px;
+      align-items:stretch!important;
+    }
+    .actions .btn{
+      min-height:32px;
+      border-radius:11px!important;
+      font-size:11.5px!important;
+      font-weight:900!important;
+      letter-spacing:.01em;
+      display:inline-flex!important;
+      align-items:center;
+      justify-content:center;
+      gap:5px;
+      padding:7px 9px!important;
+      box-shadow:0 6px 14px rgba(15,23,42,.06)!important;
+    }
+    .actions .btn:hover{transform:translateY(-1px)}
+    .actions .state-pill{
+      grid-column:1/-1;
+      justify-content:center;
+      border-radius:12px;
+      padding:7px 9px;
+    }
+    .btn.edit::before{content:"✎";font-weight:900;color:#075985}
+    .btn.ok::before{content:"✓";font-weight:900}
+    .btn.danger::before{content:"×";font-weight:900}
+    .btn.warn::before{content:"↺";font-weight:900}
+    .btn.secondary::before{content:"";}
+
+    /* Calendario: aprobados más bonitos y festivos con nombre corto */
+    .holiday-name{
+      display:inline-block;
+      margin-top:4px;
+      max-width:100%;
+      color:#b45309;
+      background:#ffedd5;
+      border:1px solid #fed7aa;
+      border-radius:999px;
+      padding:2px 6px;
+      font-size:9px;
+      font-weight:900;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      word-break:keep-all;
+    }
+    .day.has-approved{
+      background:linear-gradient(180deg,#f8fcff,#e8f6ff)!important;
+      border:1.8px solid #7dd3fc!important;
+      box-shadow:0 10px 22px rgba(14,165,233,.15)!important;
+    }
+    .vac.approved{
+      position:relative;
+      margin-top:5px!important;
+      border-radius:10px!important;
+      background:linear-gradient(135deg,#075985,#0ea5e9)!important;
+      color:#fff!important;
+      border:0!important;
+      border-left:0!important;
+      box-shadow:0 8px 16px rgba(14,165,233,.22)!important;
+      padding:5px 6px!important;
+      font-size:10.5px!important;
+      font-weight:900!important;
+      line-height:1.18!important;
+      white-space:normal!important;
+      overflow:hidden!important;
+      text-overflow:ellipsis!important;
+    }
+    .vac.approved:before{content:""!important;margin:0!important}
+    .vac-type{
+      display:inline-block;
+      background:rgba(255,255,255,.22);
+      border:1px solid rgba(255,255,255,.28);
+      color:#fff;
+      border-radius:999px;
+      padding:1px 5px;
+      font-size:8.5px;
+      margin-right:4px;
+      font-weight:900;
+      vertical-align:1px;
+    }
+    .vac-name{
+      display:inline;
+    }
+
+    .holiday-name{
+      cursor:pointer!important;
+      max-width:64px!important;
+      text-align:center;
+    }
+    .holiday-name:hover{
+      background:#fed7aa!important;
+      color:#92400e!important;
+      transform:translateY(-1px);
+    }
+
+    .type-option:not(.active){background:linear-gradient(135deg,#ffffff,#f8fbff)!important;border-color:#dbeafe!important;box-shadow:0 8px 18px rgba(15,23,42,.04)!important}
+    .type-option:not(.active) .type-mark{border-color:#93c5fd!important;background:#fff!important}
+    
+    /* Ajustes de portada solicitados: sin círculos ni chips */
+    .landing-hero{
+      min-height:auto!important;
+      background:
+        linear-gradient(135deg,#ffffff 0%,#f4fbff 52%,#eaf6ff 100%)!important;
+      border:1px solid #cfe8fb!important;
+    }
+    .landing-hero:before{
+      background-image:
+        linear-gradient(rgba(14,165,233,.06) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(14,165,233,.06) 1px,transparent 1px)!important;
+      background-size:38px 38px!important;
+      mask-image:linear-gradient(90deg,#000,transparent 92%)!important;
+    }
+    .eyebrow,.hero-chips,.hero-visual,.orb,.mini-dashboard{display:none!important}
+    .hero-copy{max-width:900px!important}
+    .landing-hero h1{
+      font-size:36px!important;
+      letter-spacing:-.045em!important;
+      margin-bottom:0!important;
+    }
+    .landing-hero p{
+      font-size:16px!important;
+      max-width:760px!important;
+      line-height:1.55!important;
+    }
+    .landing-title{
+      padding:22px 24px!important;
+      background:linear-gradient(135deg,#ffffff,#f8fbff)!important;
+    }
+    .landing-title span{
+      color:#0369a1!important;
+    }
+    .landing-title h2{
+      font-size:26px!important;
+      margin-top:6px!important;
+    }
+    .landing-title p{
+      font-size:14.5px!important;
+      max-width:780px!important;
+      line-height:1.5!important;
+    }
+    .practice-icon{
+      width:56px!important;
+      min-width:56px!important;
+      height:48px!important;
+      border-radius:14px!important;
+      font-size:16px!important;
+      letter-spacing:.03em!important;
+    }
+    .dw-card .practice-icon{
+      font-size:15px!important;
+    }
+
+    .landing-hero{padding:22px 28px!important}
+
+    /* Selección de práctica más limpia, sin rectángulo contenedor */
+    .landing-title{
+      background:transparent!important;
+      border:0!important;
+      box-shadow:none!important;
+      padding:8px 6px 2px!important;
+      text-align:center!important;
+      margin-top:4px!important;
+    }
+    .landing-title span{
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      padding:6px 12px!important;
+      border-radius:999px!important;
+      background:#e0f2fe!important;
+      border:1px solid #bae6fd!important;
+      color:#075985!important;
+      font-size:11px!important;
+      letter-spacing:.08em!important;
+      font-weight:900!important;
+    }
+    .landing-title h2{
+      margin:10px auto 6px!important;
+      max-width:760px!important;
+      font-size:28px!important;
+      color:#083344!important;
+      letter-spacing:-.035em!important;
+    }
+    .landing-title p{
+      margin:0 auto!important;
+      max-width:720px!important;
+      color:#64748b!important;
+      font-size:14.5px!important;
+      line-height:1.45!important;
+    }
+    .landing-practices{
+      gap:18px!important;
+    }
+    .practice-card{
+      margin-top:2px!important;
+    }
+
+    /* Portada práctica: tarjetas sin círculos decorativos */
+    .practice-card:before{display:none!important}
+    .practice-card{
+      background:linear-gradient(135deg,#ffffff 0%,#f8fbff 68%,#eef8ff 100%)!important;
+      border:1px solid #cfe8fb!important;
+      border-radius:22px!important;
+      min-height:205px!important;
+      position:relative!important;
+      overflow:hidden!important;
+    }
+    .practice-card:after{
+      content:"";
+      position:absolute;
+      left:0;top:0;bottom:0;
+      width:6px;
+      background:linear-gradient(180deg,#075985,#0ea5e9);
+    }
+    .practice-top{
+      position:relative;
+      z-index:2;
+    }
+    .practice-icon{
+      background:#eff8ff!important;
+      color:#075985!important;
+      border:1px solid #bae6fd!important;
+      box-shadow:none!important;
+    }
+    .practice-card h2{
+      color:#083344!important;
+      margin-top:20px!important;
+    }
+    .practice-card p{
+      color:#64748b!important;
+    }
+    .practice-footer{
+      background:#f8fbff;
+      margin-left:-4px;
+      margin-right:-4px;
+      padding:13px 14px 0!important;
+      border-top:1px solid #e2edf7!important;
+      border-radius:0 0 14px 14px;
+    }
+    .practice-card:hover{
+      transform:translateY(-4px)!important;
+      border-color:#38bdf8!important;
+      box-shadow:0 22px 46px rgba(14,165,233,.14)!important;
+    }
+    .practice-card:hover .practice-icon{
+      background:linear-gradient(135deg,#075985,#0ea5e9)!important;
+      color:#fff!important;
+      border-color:transparent!important;
+    }
+    .practice-card:hover:after{
+      width:8px;
+    }
+    .landing-practices{
+      margin-top:18px!important;
+    }
+
+    /* HOME FINAL: diseño limpio, sin círculos ni decoraciones pesadas */
+    .landing-hero{
+      padding:26px 30px!important;
+      min-height:auto!important;
+      border-radius:24px!important;
+      background:linear-gradient(135deg,#ffffff 0%,#f7fbff 60%,#eef8ff 100%)!important;
+      border:1px solid #d8e8f5!important;
+      box-shadow:0 18px 42px rgba(15,23,42,.07)!important;
+      overflow:hidden!important;
+      display:block!important;
+    }
+    .landing-hero:before,
+    .landing-hero:after,
+    .practice-card:before,
+    .practice-card:after,
+    .hero-visual,
+    .orb,
+    .mini-dashboard,
+    .hero-chips,
+    .eyebrow{
+      display:none!important;
+      content:none!important;
+    }
+    .hero-copy{max-width:none!important}
+    .landing-kicker{
+      display:inline-flex!important;
+      padding:6px 10px!important;
+      border-radius:999px!important;
+      background:#e0f2fe!important;
+      border:1px solid #bae6fd!important;
+      color:#075985!important;
+      font-size:11px!important;
+      letter-spacing:.08em!important;
+      text-transform:uppercase!important;
+      font-weight:950!important;
+      margin-bottom:10px!important;
+    }
+    .landing-hero h1{
+      margin:0!important;
+      font-size:34px!important;
+      line-height:1.08!important;
+      letter-spacing:-.045em!important;
+      color:#082f49!important;
+    }
+    .landing-hero p{
+      margin:8px 0 0!important;
+      color:#64748b!important;
+      font-size:15px!important;
+      line-height:1.45!important;
+    }
+    .landing-practices{
+      margin-top:20px!important;
+      display:grid!important;
+      grid-template-columns:1fr 1fr!important;
+      gap:16px!important;
+      align-items:stretch!important;
+    }
+    .landing-title{
+      grid-column:1/-1!important;
+      background:transparent!important;
+      border:0!important;
+      box-shadow:none!important;
+      padding:0 2px 4px!important;
+      text-align:left!important;
+      margin:0!important;
+    }
+    .landing-title span{
+      display:block!important;
+      background:transparent!important;
+      border:0!important;
+      padding:0!important;
+      color:#0284c7!important;
+      font-size:12px!important;
+      text-transform:uppercase!important;
+      letter-spacing:.08em!important;
+      font-weight:950!important;
+    }
+    .landing-title h2{
+      margin:5px 0 0!important;
+      font-size:24px!important;
+      line-height:1.15!important;
+      color:#083344!important;
+      letter-spacing:-.035em!important;
+      max-width:none!important;
+    }
+    .landing-title p{display:none!important}
+    .practice-card{
+      min-height:178px!important;
+      padding:22px!important;
+      border-radius:22px!important;
+      border:1px solid #d8e8f5!important;
+      background:#ffffff!important;
+      box-shadow:0 16px 36px rgba(15,23,42,.07)!important;
+      display:flex!important;
+      flex-direction:column!important;
+      justify-content:space-between!important;
+      overflow:hidden!important;
+      transform:none!important;
+      transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease!important;
+    }
+    .practice-card:hover{
+      transform:translateY(-4px)!important;
+      border-color:#7dd3fc!important;
+      box-shadow:0 24px 48px rgba(14,165,233,.15)!important;
+    }
+    .practice-main{
+      display:flex!important;
+      align-items:flex-start!important;
+      gap:15px!important;
+    }
+    .practice-top{display:none!important}
+    .practice-icon{
+      width:58px!important;
+      height:54px!important;
+      min-width:58px!important;
+      border-radius:16px!important;
+      background:linear-gradient(135deg,#075985,#0ea5e9)!important;
+      color:#fff!important;
+      border:0!important;
+      box-shadow:0 12px 22px rgba(14,165,233,.22)!important;
+      font-size:15px!important;
+      letter-spacing:.03em!important;
+      font-weight:950!important;
+    }
+    .dw-card .practice-icon{font-size:14px!important}
+    .practice-card h2{
+      margin:2px 0 6px!important;
+      color:#083344!important;
+      font-size:24px!important;
+      letter-spacing:-.035em!important;
+    }
+    .practice-card p{
+      margin:0!important;
+      color:#64748b!important;
+      font-size:14px!important;
+      line-height:1.45!important;
+      max-width:420px!important;
+    }
+    .practice-footer{
+      display:flex!important;
+      justify-content:space-between!important;
+      align-items:center!important;
+      margin:18px 0 0!important;
+      padding:14px 0 0!important;
+      border-top:1px solid #e7f0f8!important;
+      background:transparent!important;
+      color:#075985!important;
+      font-size:13px!important;
+      font-weight:950!important;
+      border-radius:0!important;
+    }
+    .practice-footer b{
+      width:34px!important;
+      height:34px!important;
+      border-radius:12px!important;
+      background:#e0f2fe!important;
+      color:#075985!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      transition:.18s!important;
+    }
+    .practice-card:hover .practice-footer b{
+      background:#075985!important;
+      color:#fff!important;
+      transform:translateX(3px)!important;
+    }
+    @media(max-width:960px){
+      .landing-practices{grid-template-columns:1fr!important}
+      .landing-hero h1{font-size:30px!important}
+    }
+
+    /* PORTADA FINAL - limpia, profesional y sin elementos decorativos extra */
+    .landing-hero{
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      text-align:center!important;
+      padding:30px 28px 28px!important;
+      min-height:auto!important;
+      background:linear-gradient(135deg,#ffffff 0%,#f7fbff 58%,#edf7ff 100%)!important;
+      border:1px solid #dbeafe!important;
+      border-radius:26px!important;
+      box-shadow:0 18px 42px rgba(15,23,42,.07)!important;
+      overflow:hidden!important;
+    }
+    .landing-hero:before,
+    .landing-hero:after,
+    .practice-card:before,
+    .practice-card:after,
+    .hero-visual,
+    .orb,
+    .mini-dashboard,
+    .hero-chips,
+    .eyebrow{
+      display:none!important;
+      content:none!important;
+    }
+    .hero-copy{
+      max-width:850px!important;
+      margin:0 auto!important;
+    }
+    .landing-kicker{
+      display:inline-flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      padding:6px 12px!important;
+      margin:0 0 12px!important;
+      border-radius:999px!important;
+      border:1px solid #bae6fd!important;
+      background:#e0f2fe!important;
+      color:#075985!important;
+      font-size:11px!important;
+      line-height:1!important;
+      font-weight:950!important;
+      text-transform:uppercase!important;
+      letter-spacing:.08em!important;
+    }
+    .landing-hero h1{
+      margin:0!important;
+      color:#082f49!important;
+      font-size:38px!important;
+      line-height:1.08!important;
+      letter-spacing:-.045em!important;
+    }
+    .landing-hero p{
+      margin:10px auto 0!important;
+      max-width:680px!important;
+      color:#64748b!important;
+      font-size:15px!important;
+      line-height:1.5!important;
+      font-weight:600!important;
+    }
+    .landing-practices{
+      margin-top:22px!important;
+      display:grid!important;
+      grid-template-columns:1fr 1fr!important;
+      gap:18px!important;
+      align-items:stretch!important;
+    }
+    .landing-title{
+      grid-column:1/-1!important;
+      text-align:center!important;
+      background:transparent!important;
+      border:0!important;
+      box-shadow:none!important;
+      padding:4px 0 6px!important;
+      margin:0!important;
+    }
+    .landing-title span{
+      display:inline-block!important;
+      background:transparent!important;
+      border:0!important;
+      padding:0!important;
+      color:#0284c7!important;
+      font-size:12px!important;
+      line-height:1!important;
+      font-weight:950!important;
+      text-transform:uppercase!important;
+      letter-spacing:.08em!important;
+    }
+    .landing-title h2{
+      margin:8px auto 0!important;
+      max-width:780px!important;
+      color:#083344!important;
+      font-size:26px!important;
+      line-height:1.15!important;
+      letter-spacing:-.035em!important;
+    }
+    .landing-title p{display:none!important}
+    .practice-card{
+      position:relative!important;
+      min-height:190px!important;
+      padding:24px!important;
+      border-radius:24px!important;
+      border:1px solid #dbeafe!important;
+      background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%)!important;
+      box-shadow:0 16px 38px rgba(15,23,42,.07)!important;
+      display:flex!important;
+      flex-direction:column!important;
+      justify-content:space-between!important;
+      overflow:hidden!important;
+      transform:none!important;
+      transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background .18s ease!important;
+    }
+    .practice-card:hover{
+      transform:translateY(-5px)!important;
+      border-color:#7dd3fc!important;
+      box-shadow:0 26px 54px rgba(14,165,233,.16)!important;
+      background:linear-gradient(180deg,#ffffff 0%,#f3fbff 100%)!important;
+    }
+    .practice-main{
+      display:flex!important;
+      gap:16px!important;
+      align-items:flex-start!important;
+    }
+    .practice-top{display:none!important}
+    .practice-icon{
+      width:62px!important;
+      height:56px!important;
+      min-width:62px!important;
+      border-radius:18px!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      background:linear-gradient(135deg,#075985,#0ea5e9)!important;
+      color:#ffffff!important;
+      border:0!important;
+      box-shadow:0 12px 24px rgba(14,165,233,.24)!important;
+      font-size:15px!important;
+      letter-spacing:.04em!important;
+      font-weight:950!important;
+    }
+    .dw-card .practice-icon{font-size:14px!important}
+    .practice-text h2,
+    .practice-card h2{
+      margin:0 0 7px!important;
+      color:#083344!important;
+      font-size:25px!important;
+      line-height:1.1!important;
+      letter-spacing:-.035em!important;
+    }
+    .practice-text p,
+    .practice-card p{
+      margin:0!important;
+      color:#64748b!important;
+      font-size:14px!important;
+      line-height:1.45!important;
+      max-width:430px!important;
+      font-weight:600!important;
+    }
+    .practice-footer{
+      display:flex!important;
+      justify-content:space-between!important;
+      align-items:center!important;
+      margin:20px 0 0!important;
+      padding:14px 0 0!important;
+      border-top:1px solid #e6eef6!important;
+      background:transparent!important;
+      color:#075985!important;
+      font-size:13px!important;
+      font-weight:950!important;
+      border-radius:0!important;
+    }
+    .practice-footer b{
+      width:36px!important;
+      height:36px!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      border-radius:13px!important;
+      background:#e0f2fe!important;
+      color:#075985!important;
+      font-size:18px!important;
+      transition:.18s ease!important;
+    }
+    .practice-card:hover .practice-footer b{
+      background:#075985!important;
+      color:#fff!important;
+      transform:translateX(4px)!important;
+    }
+    @media(max-width:960px){
+      .landing-practices{grid-template-columns:1fr!important}
+      .landing-hero h1{font-size:31px!important}
+      .landing-title h2{font-size:23px!important}
+    }
+
+    .practice-board-title{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .board-label{
+      display:inline-flex;
+      width:max-content;
+      color:#0369a1;
+      background:#e0f2fe;
+      border:1px solid #bae6fd;
+      border-radius:999px;
+      padding:5px 10px;
+      font-size:11px;
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+    .practice-board-title h2{
+      font-size:26px;
+      line-height:1.12;
+      letter-spacing:-.035em;
+      color:#075985;
+    }
+
+    /* Encabezado interno de práctica - versión visual limpia */
+    .app-header{
+      position:relative;
+      overflow:hidden;
+      align-items:center!important;
+      background:linear-gradient(135deg,#ffffff 0%,#f7fbff 62%,#eaf6ff 100%);
+      border:1px solid #dbeafe;
+      border-radius:24px;
+      padding:20px 22px;
+      box-shadow:0 16px 40px rgba(15,23,42,.07);
+      margin-bottom:18px;
+    }
+    .app-header:before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(90deg,rgba(14,165,233,.10),transparent 42%);
+      pointer-events:none;
+    }
+    .app-title-block{
+      position:relative;
+      z-index:1;
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .app-title-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:3px;
+    }
+    .app-module{
+      display:inline-flex;
+      align-items:center;
+      width:max-content;
+      color:#0369a1;
+      background:#e0f2fe;
+      border:1px solid #bae6fd;
+      border-radius:999px;
+      padding:6px 11px;
+      font-size:11px;
+      font-weight:950;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+    .app-practice-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:48px;
+      color:#fff;
+      background:linear-gradient(135deg,#075985,#0ea5e9);
+      border-radius:999px;
+      padding:6px 12px;
+      font-size:11px;
+      font-weight:950;
+      letter-spacing:.04em;
+      box-shadow:0 8px 18px rgba(14,165,233,.22);
+    }
+    .app-title-block h2{
+      margin:0!important;
+      color:#082f49!important;
+      font-size:28px!important;
+      line-height:1.1!important;
+      letter-spacing:-.04em!important;
+    }
+    .app-title-block p{
+      margin:0!important;
+      color:#64748b!important;
+      font-size:13.5px!important;
+      font-weight:650!important;
+      max-width:680px;
+    }
+    .change-practice-btn{
+      position:relative;
+      z-index:1;
+      border:1px solid #cdeafe!important;
+      background:#ffffff!important;
+      color:#075985!important;
+      box-shadow:0 8px 18px rgba(14,165,233,.08);
+    }
+    .change-practice-btn:hover{
+      background:#e0f2fe!important;
+      transform:translateY(-1px);
+    }
+    @media(max-width:960px){
+      .app-header{display:block!important}
+      .change-practice-btn{margin-top:14px;width:100%}
+      .app-title-block h2{font-size:24px!important}
+    }
+
+  
+    /* =========================================================
+       HOME PREMIUM - visual limpia, profesional y sin círculos
+       ========================================================= */
+    .landing-hero{
+      position:relative!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:space-between!important;
+      gap:28px!important;
+      min-height:210px!important;
+      padding:34px 36px!important;
+      overflow:hidden!important;
+      border-radius:28px!important;
+      border:1px solid #cfe8fb!important;
+      background:
+        linear-gradient(135deg,#ffffff 0%,#f7fbff 48%,#eaf6ff 100%)!important;
+      box-shadow:0 22px 56px rgba(7,89,133,.10)!important;
+      text-align:left!important;
+    }
+    .landing-hero:before{
+      content:""!important;
+      display:block!important;
+      position:absolute!important;
+      inset:0!important;
+      background:
+        linear-gradient(90deg,rgba(14,165,233,.10) 0 1px,transparent 1px),
+        linear-gradient(180deg,rgba(14,165,233,.08) 0 1px,transparent 1px)!important;
+      background-size:46px 46px!important;
+      opacity:.45!important;
+      mask-image:linear-gradient(90deg,#000 0%,rgba(0,0,0,.72) 45%,transparent 88%)!important;
+      pointer-events:none!important;
+    }
+    .landing-hero:after{
+      content:""!important;
+      display:block!important;
+      position:absolute!important;
+      right:0!important;
+      top:0!important;
+      bottom:0!important;
+      width:7px!important;
+      background:linear-gradient(180deg,#075985,#0ea5e9)!important;
+      opacity:1!important;
+      border-radius:0 28px 28px 0!important;
+    }
+    .landing-hero .hero-copy{
+      position:relative!important;
+      z-index:1!important;
+      max-width:760px!important;
+      margin:0!important;
+    }
+    .landing-hero h1{
+      margin:0!important;
+      color:#082f49!important;
+      font-size:42px!important;
+      line-height:1.04!important;
+      letter-spacing:-.05em!important;
+      font-weight:950!important;
+    }
+    .landing-hero p{
+      margin:12px 0 0!important;
+      max-width:650px!important;
+      color:#475569!important;
+      font-size:15.5px!important;
+      line-height:1.55!important;
+      font-weight:650!important;
+    }
+    .landing-hero .pill{
+      display:none!important;
+    }
+    .landing-practices{
+      margin-top:24px!important;
+      display:grid!important;
+      grid-template-columns:1fr 1fr!important;
+      gap:18px!important;
+      align-items:stretch!important;
+    }
+    .landing-title{
+      grid-column:1/-1!important;
+      margin:0!important;
+      padding:0!important;
+      background:transparent!important;
+      border:0!important;
+      box-shadow:none!important;
+      text-align:left!important;
+    }
+    .landing-title span,
+    .landing-title p{
+      display:none!important;
+    }
+    .landing-title h2{
+      position:relative!important;
+      display:inline-flex!important;
+      align-items:center!important;
+      margin:0!important;
+      padding:0 0 0 14px!important;
+      color:#083344!important;
+      font-size:22px!important;
+      line-height:1.2!important;
+      letter-spacing:-.035em!important;
+      font-weight:950!important;
+    }
+    .landing-title h2:before{
+      content:""!important;
+      position:absolute!important;
+      left:0!important;
+      top:2px!important;
+      bottom:2px!important;
+      width:5px!important;
+      border-radius:999px!important;
+      background:linear-gradient(180deg,#075985,#0ea5e9)!important;
+    }
+
+    .practice-card{
+      position:relative!important;
+      overflow:hidden!important;
+      min-height:190px!important;
+      padding:24px!important;
+      border-radius:24px!important;
+      background:#ffffff!important;
+      border:1px solid #d8e8f5!important;
+      box-shadow:0 18px 42px rgba(15,23,42,.075)!important;
+      display:flex!important;
+      flex-direction:column!important;
+      justify-content:space-between!important;
+      transform:none!important;
+      transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease!important;
+    }
+    .practice-card:before,
+    .practice-card:after{
+      display:none!important;
+      content:none!important;
+    }
+    .practice-card:hover{
+      transform:translateY(-5px)!important;
+      border-color:#7dd3fc!important;
+      box-shadow:0 28px 58px rgba(14,165,233,.16)!important;
+    }
+    .practice-main{
+      display:flex!important;
+      align-items:flex-start!important;
+      gap:16px!important;
+      position:relative!important;
+      z-index:1!important;
+    }
+    .practice-top{
+      display:none!important;
+    }
+    .practice-icon{
+      width:64px!important;
+      height:56px!important;
+      min-width:64px!important;
+      border-radius:17px!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      background:linear-gradient(135deg,#075985,#0ea5e9)!important;
+      color:#ffffff!important;
+      border:0!important;
+      box-shadow:0 14px 26px rgba(14,165,233,.24)!important;
+      font-size:15px!important;
+      letter-spacing:.045em!important;
+      font-weight:950!important;
+    }
+    .dw-card .practice-icon{
+      font-size:14px!important;
+    }
+    .practice-text h2,
+    .practice-card h2{
+      margin:1px 0 8px!important;
+      color:#082f49!important;
+      font-size:25px!important;
+      line-height:1.1!important;
+      letter-spacing:-.035em!important;
+      font-weight:950!important;
+    }
+    .practice-text p,
+    .practice-card p{
+      margin:0!important;
+      max-width:440px!important;
+      color:#64748b!important;
+      font-size:14px!important;
+      line-height:1.48!important;
+      font-weight:650!important;
+    }
+    .practice-footer{
+      position:relative!important;
+      z-index:1!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:space-between!important;
+      margin:22px 0 0!important;
+      padding:15px 0 0!important;
+      border-top:1px solid #e6eef6!important;
+      background:transparent!important;
+      color:#075985!important;
+      border-radius:0!important;
+      font-size:13px!important;
+      font-weight:950!important;
+    }
+    .practice-footer b{
+      width:36px!important;
+      height:36px!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+      border-radius:13px!important;
+      background:#e0f2fe!important;
+      color:#075985!important;
+      font-size:18px!important;
+      transition:.18s ease!important;
+    }
+    .practice-card:hover .practice-footer b{
+      background:#075985!important;
+      color:#ffffff!important;
+      transform:translateX(4px)!important;
+    }
+
+    /* Encabezado interno más compacto sin afectar funcionalidad */
+    .app-header{
+      padding:16px 18px!important;
+      border-radius:20px!important;
+      margin-bottom:16px!important;
+    }
+    .app-title-block h2{
+      font-size:25px!important;
+    }
+    .app-title-block p{
+      display:none!important;
+    }
+
+    @media(max-width:960px){
+      .landing-hero{
+        padding:26px 24px!important;
+      }
+      .landing-hero h1{
+        font-size:32px!important;
+      }
+      .landing-practices{
+        grid-template-columns:1fr!important;
+      }
+      .practice-card{
+        min-height:170px!important;
+      }
+    }
+
+  
+    /* Ajuste visual portada: menos negrilla, más limpio */
+    .landing-hero h1{
+      font-weight:800!important;
+      letter-spacing:-.035em!important;
+      font-size:38px!important;
+    }
+    .landing-hero p{
+      font-weight:500!important;
+      color:#64748b!important;
+    }
+    .landing-title h2{
+      font-weight:750!important;
+      font-size:21px!important;
+      color:#164e63!important;
+    }
+    .practice-text h2,
+    .practice-card h2{
+      font-weight:760!important;
+      font-size:23px!important;
+      letter-spacing:-.025em!important;
+    }
+    .practice-text p,
+    .practice-card p{
+      font-weight:500!important;
+      color:#64748b!important;
+    }
+    .practice-footer{
+      font-weight:750!important;
+    }
+    .practice-icon{
+      font-weight:800!important;
+    }
+    .practice-card{
+      box-shadow:0 14px 34px rgba(15,23,42,.055)!important;
+    }
+    .landing-hero{
+      box-shadow:0 16px 40px rgba(7,89,133,.075)!important;
+    }
+
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero landing-hero">
+    <div class="hero-copy">
+      <h1>Planificador de Absentismo</h1>
+      <p>Consulta y gestiona solicitudes, calendario, saldos y cobertura por práctica.</p>
+    </div>
+    <span class="pill" id="connStatus" style="display:none"></span>
+  </section>
+
+  <section id="practiceScreen" class="practice-screen landing-practices">
+    <div class="landing-title">
+      <h2>¿A qué práctica perteneces?</h2>
+    </div>
+
+    <div class="practice practice-card dev-card" onclick="entrarPractica('Development')">
+      <div class="practice-main">
+        <div class="practice-icon">DEV</div>
+        <div class="practice-text">
+          <h2>Development</h2>
+          <p>Consulta solicitudes, calendario, saldos y backups del equipo Development.</p>
+        </div>
+      </div>
+      <div class="practice-footer">
+        <span>Ingresar</span>
+        <b>→</b>
+      </div>
+    </div>
+
+    <div class="practice practice-card dw-card" onclick="entrarPractica('Digital Workplace')">
+      <div class="practice-main">
+        <div class="practice-icon">DWP</div>
+        <div class="practice-text">
+          <h2>Digital Workplace</h2>
+          <p>Gestiona vacaciones, licencias, incapacidades y cobertura operativa.</p>
+        </div>
+      </div>
+      <div class="practice-footer">
+        <span>Ingresar</span>
+        <b>→</b>
+      </div>
+    </div>
+  </section>
+
+  <main id="app" class="app">
+    <div class="topbar app-header">
+      <div class="app-title-block">
+        <div class="app-title-row">
+          <span class="app-module">Planificador de Absentismo</span>
+          <span class="app-practice-pill" id="currentPracticeBadge">Práctica</span>
+        </div>
+        <h2 id="practiceTitle">Development</h2>
+        <p>Gestiona solicitudes, aprobaciones, calendario, saldos y backups de la práctica seleccionada.</p>
+      </div>
+      <button class="btn secondary change-practice-btn" onclick="salir()">Cambiar práctica</button>
+    </div>
+
+    <div class="layout">
+      <aside class="card">
+        <h3 style="margin-top:0;color:#083344">Nueva solicitud</h3>
+        <div class="edit-banner" id="editBanner" style="display:none"></div>
+        <label>Tipo de solicitud</label>
+        <div class="type-selector" id="tipoSelector">
+          <label class="type-option active"><input type="radio" name="tipoAusencia" value="Vacaciones" checked onchange="onTipoChange()"><span class="type-mark"></span><span class="type-copy"><strong>Vacaciones</strong></span></label>
+          <label class="type-option"><input type="radio" name="tipoAusencia" value="Licencia de maternidad" onchange="onTipoChange()"><span class="type-mark"></span><span class="type-copy"><strong>Licencia de maternidad</strong></span></label>
+          <label class="type-option"><input type="radio" name="tipoAusencia" value="Licencia de paternidad" onchange="onTipoChange()"><span class="type-mark"></span><span class="type-copy"><strong>Licencia de paternidad</strong></span></label>
+          <label class="type-option"><input type="radio" name="tipoAusencia" value="Incapacidad médica" onchange="onTipoChange()"><span class="type-mark"></span><span class="type-copy"><strong>Incapacidad médica</strong></span></label>
+          <label class="type-option"><input type="radio" name="tipoAusencia" value="Licencia de luto" onchange="onTipoChange()"><span class="type-mark"></span><span class="type-copy"><strong>Licencia de luto</strong></span></label>
+        </div>
+        <label>DSM</label><select id="dsm" onchange="onDsmChange()"></select>
+        <label>Saldo actual</label><input id="saldo" readonly>
+        <label>Fecha salida</label><input type="text" id="fechaSalida" readonly placeholder="Seleccione fecha" onfocus="openDate(this)" onclick="openDate(this)" onchange="onFechasChange()">
+        <label>Fecha regreso</label><input type="text" id="fechaRegreso" readonly placeholder="Seleccione fecha" onfocus="openDate(this)" onclick="openDate(this)" onchange="onFechasChange()">
+        <label>Días hábiles calculados</label>
+        <div class="days-box">
+          <div>
+            <span id="daysTitle">Total solicitado</span>
+            <small id="daysSubtitle">No incluye sábados, domingos ni festivos Colombia</small>
+          </div>
+          <strong id="diasHabilesDisplay">0</strong>
+        </div>
+        <input id="diasHabiles" readonly style="margin-top:8px;text-align:center;font-weight:900;color:#0369a1;" value="0 días hábiles">
+        <div class="notice" id="holidayNotice"></div>
+        <div class="backup-grid">
+          <div class="backup-block">
+            <div class="backup-title">Backup 1</div>
+            <select id="backup" onchange="onBackup1Change()"></select>
+          </div>
+          <div class="backup-block">
+            <div class="backup-title">Backup 2 <span style="color:#64748b;text-transform:none;letter-spacing:0;font-weight:800">(opcional)</span></div>
+            <select id="backup2"></select>
+          </div>
+        </div>
+        <label>Comentarios</label><textarea id="comentarios" placeholder="Observaciones"></textarea>
+        <button class="btn" id="submitBtn" onclick="registrar()">Registrar solicitud</button><button class="btn secondary" id="cancelEditBtn" style="display:none;margin-top:8px" onclick="cancelarEdicion()">Cancelar edición</button>
+        <p class="hint">No cuenta sábados, domingos ni festivos de Colombia. Si hay cruce del DSM o backup, no permite registrar.</p>
+      </aside>
+
+      <section class="card">
+        <div class="kpis">
+          <div class="kpi kpi-click" onclick="irSolicitudesEstado('Pendiente')" title="Ver solicitudes pendientes"><small>Pendientes</small><strong id="kPend">0</strong></div>
+          <div class="kpi kpi-click" onclick="irSolicitudesEstado('Aprobado')" title="Ver solicitudes aprobadas"><small>Aprobadas</small><strong id="kAprob">0</strong></div>
+          <div class="kpi kpi-click" onclick="activarTab('alertas')" title="Ver alertas de saldos mayores a 15 días"><small>DSM &gt; 15 días</small><strong id="kAlert">0</strong></div>
+        </div>
+        <div class="tabs">
+          <button class="tab active" data-tab="cal" onclick="activarTab('cal')">Calendario</button>
+          <button class="tab" data-tab="sol" onclick="activarTab('sol')">Solicitudes <span class="tab-count" id="tabPendCount">0</span></button>
+          <button class="tab" data-tab="saldos" onclick="activarTab('saldos')">Saldos</button>
+          <button class="tab" data-tab="alertas" onclick="activarTab('alertas')">Alertas +15 días</button>
+        </div>
+        <div id="panel-cal" class="panel active">
+          <div class="cal-head"><button class="btn secondary" onclick="mes(-1)">Anterior</button><strong id="calTitle"></strong><button class="btn secondary" onclick="mes(1)">Siguiente</button></div>
+          <div class="legend"><i></i> Días con vacaciones aprobadas de DSM</div>
+          <div class="calendar" id="calendar"></div>
+        </div>
+        <div id="panel-sol" class="panel">
+          <div class="sol-subtabs">
+            <button class="sol-subtab active" data-soltab="Pendiente" onclick="activarSolTab('Pendiente')">Pendientes <span id="countPend">0</span></button>
+            <button class="sol-subtab" data-soltab="Aprobado" onclick="activarSolTab('Aprobado')">Aprobadas <span id="countAprob">0</span></button>
+            <button class="sol-subtab" data-soltab="Rechazado" onclick="activarSolTab('Rechazado')">Rechazadas <span id="countRech">0</span></button>
+          </div>
+          <table><thead><tr><th>Tipo</th><th>DSM</th><th>Fechas</th><th>Días</th><th>Backups</th><th>Estado</th><th>Acciones</th></tr></thead><tbody id="solRows"></tbody></table>
+        </div>
+        <div id="panel-saldos" class="panel"><table><thead><tr><th>Documento</th><th>DSM</th><th>Saldo</th></tr></thead><tbody id="saldoRows"></tbody></table></div>
+        <div id="panel-alertas" class="panel"><div id="alertRows"></div></div>
+      </section>
+    </div>
+  </main>
+</div>
+<div id="customDatepicker" class="custom-datepicker" style="display:none"></div>
+<script>
+/* 1) PEGA AQUÍ TUS DATOS DE SUPABASE */
+const SUPABASE_URL = "https://uuligswbxflpnhaqjtuh.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV1bGlnc3dieGZscG5oYXFqdHVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzMjM5NjIsImV4cCI6MjA5Nzg5OTk2Mn0.bWyq4X0SDjLleI0VGCQ5XVgmux6bCeXYU6TCKxsSBfM";
+
+/* 2) EMAILJS - correo cuando se registra una solicitud pendiente */
+const EMAILJS_SERVICE_ID = "service_8sd64ae";
+const EMAILJS_TEMPLATE_ID = "template_wjg9suj";
+const EMAILJS_PUBLIC_KEY = "Ij2Kb47_remEUsg6b";
+const EMAIL_APROBADOR_DEVELOPMENT = "faperez@stefanini.com";
+const EMAIL_APROBADOR_DIGITAL = "cjgutierrez@stefanini.com";
+const EMAIL_APROBADOR_CRISTIAN = "faperez@stefanini.com";
+
+const TABLE = "vacaciones_dsm";
+let db=null, practicaActual="", solicitudes=[], calDate=new Date(), solTabActual="Pendiente", editingId=null, ultimoTipo="Vacaciones";
+
+const FECHA_BASE = new Date("2026-06-24T00:00:00");
+const ACUMULACION_MENSUAL = 1.25;
+
+const lideres = [
+ ["52787176","Elicet Borrero Forero","Development",17.38],["1127609943","Isaura Cristina De Sousa Alvar","Development",18],["1018421973","Sayra Giselly Rodriguez Espitia","Development",12.67],["1037579523","Carolina Cartagena Leon","Development",8.63],["46364129","Maria Cristina Bonilla Torres","Development",8.83],["1052406744","Catalina Benitez Torres","Development",8.71],["1030541959","Jose Luis Rodriguez Brinez","Development",6.5],["1069584999","Jonathan Gerardo Castaneda Castro","Development",1.04],["102471713","Lady Lorena Davila Parra","Development",13.25],["1026294685","Nicol Juliana Salcedo Espinosa","Development",21],["1143870344","Gisella Guerrero Henao","Development",12.71],["1004592482","Monica Jimena Noguera Rosero","Development",9.25],
+ ["1003540369","Santiago Chamarrabi Diaz","Digital Workplace",7.75],["1024471713","Lady Lorena Davila Parra","Digital Workplace",13.25],["53049289","Carmen Elisa Garcia Pachon","Digital Workplace",14.96],["1032369426","Jhon Paul Urquijo Quintero","Digital Workplace",21.17],["1116236375","Jhon Stiven Diaz Lozano","Digital Workplace",20.58],["1013599764","Jeffer Ricardo Bernal Gongora","Digital Workplace",18],["N/D","Jamal Eybar Snape Aguero","Digital Workplace",0],["1024480407","Wilson Fernando Sanchez Marent","Digital Workplace",20.08],["93297996","Rafael Duvan Bejarano Forero","Digital Workplace",13.75],["1023916112","Eisenover Olano Barreto","Digital Workplace",17.75],["1016040506","Sandra Ximena Vivas Marin","Digital Workplace",17.21],["80258237","Cristian Javier Gutierrez","Digital Workplace",3.83]
+].map(x=>({documento:x[0],nombre:x[1],practica:x[2],saldoBase:x[3]}));
+
+const festivos = new Set([
+"2026-01-01","2026-01-12","2026-03-23","2026-04-02","2026-04-03","2026-05-01","2026-05-18","2026-06-08","2026-06-15","2026-06-29","2026-07-13","2026-07-20","2026-08-07","2026-08-17","2026-10-12","2026-11-02","2026-11-16","2026-12-08","2026-12-25",
+"2027-01-01","2027-01-11","2027-03-22","2027-03-25","2027-03-26","2027-05-01","2027-05-10","2027-05-31","2027-06-07","2027-06-14","2027-07-20","2027-08-07","2027-08-16","2027-10-18","2027-11-01","2027-11-15","2027-12-08","2027-12-25",
+"2028-01-01","2028-01-10","2028-03-20","2028-04-13","2028-04-14","2028-05-01","2028-05-22","2028-06-12","2028-06-19","2028-07-03","2028-07-20","2028-08-07","2028-08-21","2028-10-16","2028-11-06","2028-11-13","2028-12-08","2028-12-25"
+]);
+
+const festivosNombres = {
+ "2026-01-01":"Año Nuevo","2026-01-12":"Reyes","2026-03-23":"San José","2026-04-02":"Jueves Santo","2026-04-03":"Viernes Santo","2026-05-01":"Trabajo","2026-05-18":"Ascensión","2026-06-08":"Corpus","2026-06-15":"Sagrado Corazón","2026-06-29":"San Pedro","2026-07-13":"Nuestra Señora del Rosario de Chiquinquirá","2026-07-20":"Independencia","2026-08-07":"Batalla Boyacá","2026-08-17":"Asunción","2026-10-12":"Día de la Raza","2026-11-02":"Todos los Santos","2026-11-16":"Independencia Cartagena","2026-12-08":"Inmaculada","2026-12-25":"Navidad",
+ "2027-01-01":"Año Nuevo","2027-01-11":"Reyes","2027-03-22":"San José","2027-03-25":"Jueves Santo","2027-03-26":"Viernes Santo","2027-05-01":"Trabajo","2027-05-10":"Ascensión","2027-05-31":"Corpus","2027-06-07":"Sagrado Corazón","2027-06-14":"San Pedro","2027-07-20":"Independencia","2027-08-07":"Batalla Boyacá","2027-08-16":"Asunción","2027-10-18":"Día de la Raza","2027-11-01":"Todos los Santos","2027-11-15":"Independencia Cartagena","2027-12-08":"Inmaculada","2027-12-25":"Navidad",
+ "2028-01-01":"Año Nuevo","2028-01-10":"Reyes","2028-03-20":"San José","2028-04-13":"Jueves Santo","2028-04-14":"Viernes Santo","2028-05-01":"Trabajo","2028-05-22":"Ascensión","2028-06-12":"Corpus","2028-06-19":"Sagrado Corazón","2028-07-03":"San Pedro","2028-07-20":"Independencia","2028-08-07":"Batalla Boyacá","2028-08-21":"Asunción","2028-10-16":"Día de la Raza","2028-11-06":"Todos los Santos","2028-11-13":"Independencia Cartagena","2028-12-08":"Inmaculada","2028-12-25":"Navidad"
+};
+
+
+function init(){
+ if(!SUPABASE_URL.includes("supabase.co") || SUPABASE_ANON_KEY.includes("PEGAR_AQUI")){
+   document.getElementById("connStatus").textContent="Falta pegar URL y anon key";
+   return;
+ }
+ db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+ if(window.emailjs && EMAILJS_PUBLIC_KEY){
+   emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+ }
+ document.getElementById("connStatus").textContent="";
+}
+let dpTarget=null, dpMonthDate=new Date();
+
+function esVacacionesTipo(tipo){
+ return (tipo || "Vacaciones") === "Vacaciones";
+}
+
+function openDate(el){
+ if(el.disabled) return;
+ dpTarget=el;
+ const iso = el.dataset.iso || displayToISO(el.value);
+ const parsed = iso ? localDate(iso) : new Date();
+ let current = isNaN(parsed.getTime()) ? new Date() : parsed;
+ const minIso = minFechaParaInput(el.id);
+ if(current < localDate(minIso)) current = localDate(minIso);
+ dpMonthDate = new Date(current.getFullYear(), current.getMonth(), 1);
+ renderDatepicker();
+ positionDatepicker(el);
+}
+
+function closeDatepicker(){
+ const dp=document.getElementById("customDatepicker");
+ if(dp) dp.style.display="none";
+ dpTarget=null;
+}
+
+function minFechaParaInput(id){
+ const hoy=hoyISO ? hoyISO() : fmt(new Date());
+ if(id==="fechaRegreso"){
+   const salida=getFechaInput("fechaSalida");
+   if(salida && localDate(salida)>localDate(hoy)) return salida;
+ }
+ return hoy;
+}
+
+function fechaBloqueadaCustom(iso,id){
+ if(!iso) return true;
+ if(localDate(iso)<localDate(minFechaParaInput(id))) return true;
+ return !habil(localDate(iso));
+}
+
+function positionDatepicker(el){
+ const dp=document.getElementById("customDatepicker");
+ const r=el.getBoundingClientRect();
+ dp.style.left=(window.scrollX+r.left)+"px";
+ dp.style.top=(window.scrollY+r.bottom+8)+"px";
+ dp.style.display="block";
+}
+
+function cambiarMesPicker(delta){
+ dpMonthDate.setMonth(dpMonthDate.getMonth()+delta);
+ renderDatepicker();
+ if(dpTarget) positionDatepicker(dpTarget);
+}
+
+function seleccionarFechaPicker(iso){
+ if(!dpTarget) return;
+ if(fechaBloqueadaCustom(iso,dpTarget.id)) return;
+ const changedId = dpTarget.id;
+ dpTarget.dataset.iso=iso;
+ dpTarget.value=isoToDisplay(iso);
+ closeDatepicker();
+ onFechasChange(changedId);
+}
+
+function renderDatepicker(){
+ const dp=document.getElementById("customDatepicker");
+ if(!dp || !dpTarget) return;
+
+ const y=dpMonthDate.getFullYear();
+ const m=dpMonthDate.getMonth();
+ const title=dpMonthDate.toLocaleDateString("es-CO",{month:"long"}).replace(/^./,c=>c.toUpperCase())+" "+y;
+ const first=new Date(y,m,1);
+ const start=(first.getDay()+6)%7;
+ const days=new Date(y,m+1,0).getDate();
+ const selected=dpTarget.dataset.iso || displayToISO(dpTarget.value);
+ const today=hoyISO();
+ let html=`<div class="dp-head">
+   <button type="button" data-dp-nav="-1">‹</button>
+   <div class="dp-title">${title}</div>
+   <button type="button" data-dp-nav="1">›</button>
+ </div>
+ <div class="dp-grid">`;
+
+ ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"].forEach(n=>html+=`<div class="dp-week">${n}</div>`);
+ for(let i=0;i<start;i++) html+=`<div class="dp-empty"></div>`;
+
+ for(let d=1;d<=days;d++){
+   const iso=fmt(new Date(y,m,d));
+   const disabled=fechaBloqueadaCustom(iso,dpTarget.id);
+   const holiday=festivos.has(iso);
+   const cls=[
+     "dp-day",
+     disabled?"disabled":"",
+     holiday?"holiday":"",
+     iso===today?"today":"",
+     iso===selected?"selected":""
+   ].filter(Boolean).join(" ");
+   html+=`<div class="${cls}" data-date="${iso}" title="${holiday?'Festivo / no seleccionable':disabled?'No seleccionable':''}">${d}</div>`;
+ }
+ html+=`</div><div class="dp-foot"><span class="dp-dot"></span> No seleccionable <span class="dp-dot h"></span> Festivo</div>`;
+ dp.innerHTML=html;
+}
+
+document.addEventListener("mousedown",function(e){
+ const dp=document.getElementById("customDatepicker");
+ if(!dp || !dp.contains(e.target)) return;
+
+ const nav=e.target.closest("[data-dp-nav]");
+ if(nav){
+   e.preventDefault();
+   e.stopPropagation();
+   cambiarMesPicker(Number(nav.dataset.dpNav));
+   return;
+ }
+
+ const day=e.target.closest("[data-date]");
+ if(day){
+   e.preventDefault();
+   e.stopPropagation();
+   seleccionarFechaPicker(day.dataset.date);
+   return;
+ }
+});
+
+document.addEventListener("click",function(e){
+ const dp=document.getElementById("customDatepicker");
+ if(!dp) return;
+ const isDateInput=e.target && (e.target.id==="fechaSalida" || e.target.id==="fechaRegreso");
+ if(dp.style.display!=="none" && !dp.contains(e.target) && !isDateInput){
+   closeDatepicker();
+ }
+});
+function fmt(d){return d.toISOString().slice(0,10)}
+function isoToDisplay(iso){
+ if(!iso) return "";
+ const [y,m,d]=iso.split("-");
+ return `${d}/${m}/${y}`;
+}
+function displayToISO(v){
+ if(!v) return "";
+ if(/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+ const m=v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+ return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
+}
+function getFechaInput(id){
+ const el=document.getElementById(id);
+ if(!el) return "";
+ return el.dataset.iso || displayToISO(el.value);
+}
+function setFechaInput(id,iso){
+ const el=document.getElementById(id);
+ if(!el) return;
+ el.dataset.iso=iso||"";
+ el.value=iso?isoToDisplay(iso):"";
+}
+function clearFechaInput(id){ setFechaInput(id,""); }
+function localDate(s){
+ const iso = displayToISO(s);
+ return new Date((iso || s)+"T00:00:00");
+}
+function habil(d){let day=d.getDay();return day!==0&&day!==6&&!festivos.has(fmt(d))}
+function diasHabiles(a,b){if(!a||!b)return 0;let x=localDate(a),y=localDate(b),n=0;if(y<x)return 0;while(x<=y){if(habil(x))n++;x.setDate(x.getDate()+1)}return n}
+function diasCalendario(a,b){if(!a||!b)return 0;let x=localDate(a),y=localDate(b);if(y<x)return 0;return Math.floor((y-x)/(1000*60*60*24))+1}
+function totalSolicitadoPorTipo(a,b){
+ const tipo=tipoActual();
+ if(tipo==="Licencia de maternidad") return 126;
+ if(tipo==="Licencia de paternidad") return 14;
+ if(tipo==="Licencia de luto") return 5;
+ return diasHabiles(a,b);
+}
+function festivosEnRango(a,b){let r=[];if(!a||!b)return r;let x=localDate(a),y=localDate(b);while(x<=y){if(festivos.has(fmt(x)))r.push(fmt(x));x.setDate(x.getDate()+1)}return r}
+function overlap(a1,a2,b1,b2){return localDate(a1)<=localDate(b2)&&localDate(b1)<=localDate(a2)}
+function meses(){
+ // Acumulación mensual: suma 1,25 días el día 5 de cada mes.
+ // La base inicial fue 24 de junio de 2026, por eso la primera suma ocurre
+ // el 5 de julio de 2026; luego 5 de agosto, 5 de septiembre, etc.
+ const h=new Date();
+ const inicioAnio=2026;
+ const inicioMes=6; // Julio = 6 porque JavaScript cuenta enero como 0.
+ let m=(h.getFullYear()-inicioAnio)*12 + (h.getMonth()-inicioMes);
+ if(h.getDate()>=5) m++;
+ return Math.max(0,m);
+}
+function normalizarNombre(nombre){
+ return String(nombre||"")
+   .normalize("NFD")
+   .replace(/[\u0300-\u036f]/g,"")
+   .toLowerCase()
+   .replace(/\s+/g," ")
+   .trim();
+}
+function mismaPersonaPorNombre(a,b){
+ return normalizarNombre(a) && normalizarNombre(a)===normalizarNombre(b);
+}
+function vacacionesMismaPersonaOtraPractica(lider,a=null,b=null,ignoreId=null){
+ if(!lider) return [];
+ return solicitudes.filter(s=>{
+   if(s.id===ignoreId) return false;
+   if(!["Pendiente","Aprobado"].includes(s.estado)) return false;
+   if((s.tipo_ausencia||"Vacaciones")!=="Vacaciones") return false;
+   if(!mismaPersonaPorNombre(s.nombre_dsm,lider.nombre)) return false;
+   if(s.practica===lider.practica) return false;
+   if(a&&b&&!overlap(a,b,s.fecha_salida,s.fecha_regreso)) return false;
+   return true;
+ });
+}
+function registroMismaPersonaOtraPractica(lider){
+ if(!lider) return null;
+ return solicitudes.find(s=>
+   ["Pendiente","Aprobado"].includes(s.estado) &&
+   mismaPersonaPorNombre(s.nombre_dsm,lider.nombre) &&
+   s.practica!==lider.practica
+ ) || null;
+}
+function bloquearCamposPorOtraPractica(registro){
+ crossPracticeLocked=!!registro;
+ crossPracticeSourceId=registro ? registro.id : null;
+
+ document.querySelectorAll('input[name="tipoAusencia"]').forEach(r=>{
+   r.disabled=!!registro;
+ });
+ document.getElementById("fechaSalida").disabled=!!registro;
+ document.getElementById("fechaRegreso").disabled=!!registro;
+
+ let n=document.getElementById("crossPracticeNotice");
+ if(!n){
+   n=document.createElement("div");
+   n.id="crossPracticeNotice";
+   n.className="notice";
+   const holiday=document.getElementById("holidayNotice");
+   holiday.parentNode.insertBefore(n, holiday.nextSibling);
+ }
+
+ if(registro){
+   n.style.display="block";
+   n.innerHTML=`<b>Aviso:</b> este DSM ya tiene una solicitud registrada en <b>${registro.practica}</b>.<br>
+   Se cargó automáticamente el mismo tipo y las mismas fechas: <b>${registro.tipo_ausencia||"Vacaciones"}</b>,
+   del <b>${isoToDisplay(registro.fecha_salida)}</b> al <b>${isoToDisplay(registro.fecha_regreso)}</b>.<br>
+   En esta práctica solo debes asignar Backup 1 y, si aplica, Backup 2.`;
+ }else{
+   n.style.display="none";
+   n.innerHTML="";
+ }
+}
+function aplicarRegistroOtraPracticaSiExiste(){
+ if(editingId) return; // En edición se respeta el registro que se está modificando.
+
+ const doc=String(document.getElementById("dsm").value||"");
+ const l=listaPractica().find(x=>String(x.documento)===doc);
+ if(!l){
+   bloquearCamposPorOtraPractica(null);
+   return;
+ }
+
+ const registro=registroMismaPersonaOtraPractica(l);
+ if(!registro){
+   bloquearCamposPorOtraPractica(null);
+   return;
+ }
+
+ setTipoAusencia(registro.tipo_ausencia || "Vacaciones");
+ setFechaInput("fechaSalida", registro.fecha_salida);
+ setFechaInput("fechaRegreso", registro.fecha_regreso);
+
+ const total=totalSolicitadoPorTipo(registro.fecha_salida,registro.fecha_regreso);
+ document.getElementById("diasHabilesDisplay").textContent=total;
+ document.getElementById("diasHabiles").value= total + ((registro.tipo_ausencia==="Licencia de maternidad" || registro.tipo_ausencia==="Licencia de paternidad") ? " días calendario" : " días hábiles");
+
+ if(registro.tipo_ausencia==="Licencia de maternidad"){
+   document.getElementById("daysTitle").textContent="Total calendario";
+   document.getElementById("daysSubtitle").textContent="Licencia de maternidad · 18 semanas";
+ }else if(registro.tipo_ausencia==="Licencia de paternidad"){
+   document.getElementById("daysTitle").textContent="Total calendario";
+   document.getElementById("daysSubtitle").textContent="Licencia de paternidad · 2 semanas";
+ }else if(registro.tipo_ausencia==="Licencia de luto"){
+   document.getElementById("daysTitle").textContent="Total hábil";
+   document.getElementById("daysSubtitle").textContent="Licencia de luto · 5 días hábiles";
+ }else{
+   document.getElementById("daysTitle").textContent="Total solicitado";
+   document.getElementById("daysSubtitle").textContent="No incluye sábados, domingos ni festivos Colombia";
+ }
+
+ bloquearCamposPorOtraPractica(registro);
+ refrescarBackups();
+}
+
+function mostrarAvisoOtraPractica(){
+ if(crossPracticeLocked) return [];
+
+ let n=document.getElementById("crossPracticeNotice");
+ if(!n){
+   n=document.createElement("div");
+   n.id="crossPracticeNotice";
+   n.className="notice";
+   const holiday=document.getElementById("holidayNotice");
+   holiday.parentNode.insertBefore(n, holiday.nextSibling);
+ }
+ const doc=String(document.getElementById("dsm").value||"");
+ const a=getFechaInput("fechaSalida");
+ const b=getFechaInput("fechaRegreso");
+ const tipo=tipoActual();
+ const l=listaPractica().find(x=>String(x.documento)===doc);
+ if(!l || tipo!=="Vacaciones" || !a || !b){
+   n.style.display="none";
+   n.innerHTML="";
+   return [];
+ }
+ const cruces=vacacionesMismaPersonaOtraPractica(l,a,b,editingId);
+ if(cruces.length){
+   n.style.display="block";
+   n.innerHTML="<b>Aviso:</b> este DSM ya tiene vacaciones reportadas en otra práctica para fechas cruzadas:<br>"+
+     cruces.map(x=>`• ${x.practica}: ${isoToDisplay(x.fecha_salida)} a ${isoToDisplay(x.fecha_regreso)} (${x.estado})`).join("<br>")+
+     "<br>No se puede duplicar el registro de vacaciones para el mismo rango.";
+ }else{
+   n.style.display="none";
+   n.innerHTML="";
+ }
+ return cruces;
+}
+
+function saldo(l){
+ // El saldo descuenta vacaciones Pendientes y Aprobadas.
+ // Si el mismo DSM existe en dos prácticas y se replica el mismo periodo,
+ // se cuenta una sola vez para evitar doble descuento.
+ const vistos=new Set();
+ let comprometido=0;
+ solicitudes.filter(s=>
+   ["Pendiente","Aprobado"].includes(s.estado) &&
+   (s.tipo_ausencia||"Vacaciones")==="Vacaciones" &&
+   mismaPersonaPorNombre(s.nombre_dsm,l.nombre)
+ ).forEach(s=>{
+   const key=`${s.fecha_salida}|${s.fecha_regreso}|${Number(s.dias_habiles||0)}`;
+   if(!vistos.has(key)){
+     vistos.add(key);
+     comprometido+=Number(s.dias_habiles||0);
+   }
+ });
+ return l.saldoBase + meses()*ACUMULACION_MENSUAL - comprometido
+}
+function saldoDisponibleParaNuevaSolicitud(l, ignoreIds=[]){
+ // Disponible para registrar vacaciones:
+ // considera vacaciones Pendientes y Aprobadas como días ya comprometidos.
+ // Si el mismo periodo está duplicado por la misma persona en otra práctica,
+ // se cuenta una sola vez.
+ const ignorar=new Set((ignoreIds||[]).filter(Boolean));
+ const vistos=new Set();
+ let comprometido=0;
+
+ solicitudes.filter(s=>
+   !ignorar.has(s.id) &&
+   ["Pendiente","Aprobado"].includes(s.estado) &&
+   (s.tipo_ausencia||"Vacaciones")==="Vacaciones" &&
+   mismaPersonaPorNombre(s.nombre_dsm,l.nombre)
+ ).forEach(s=>{
+   const key=`${s.fecha_salida}|${s.fecha_regreso}|${Number(s.dias_habiles||0)}`;
+   if(!vistos.has(key)){
+     vistos.add(key);
+     comprometido+=Number(s.dias_habiles||0);
+   }
+ });
+
+ return l.saldoBase + meses()*ACUMULACION_MENSUAL - comprometido;
+}
+
+async function cargar(){
+ if(!db){alert("Primero pega la URL y anon key de Supabase en el HTML.");return}
+ const {data,error}=await db.from(TABLE).select("*").order("created_at",{ascending:false});
+ if(error){alert("Error leyendo Supabase: "+error.message);return}
+ solicitudes=data||[]; render();
+}
+function entrarPractica(p){
+ practicaActual=p;
+ const practiceScreen=document.getElementById("practiceScreen");
+ practiceScreen.style.setProperty("display","none","important");
+ const hero=document.querySelector(".landing-hero");
+ if(hero) hero.style.setProperty("display","none","important");
+ document.querySelectorAll(".landing-title").forEach(x=>x.style.setProperty("display","none","important"));
+ document.getElementById("app").style.display="block";
+ document.getElementById("practiceTitle").textContent=p;
+ document.getElementById("currentPracticeBadge").textContent = p==="Development" ? "DEV" : "DWP";
+ cargarDSM();
+ cargar();
+}
+function salir(){
+ practicaActual="";
+ document.getElementById("app").style.display="none";
+ const hero=document.querySelector(".landing-hero");
+ if(hero) hero.style.setProperty("display","flex","important");
+ document.querySelectorAll(".landing-title").forEach(x=>x.style.removeProperty("display"));
+ const practiceScreen=document.getElementById("practiceScreen");
+ practiceScreen.style.setProperty("display","grid","important");
+}
+function listaPractica(){return lideres.filter(l=>l.practica===practicaActual).sort((a,b)=>a.nombre.localeCompare(b.nombre))}
+
+/*
+  Lista de DSM permitidos según tipo de ausencia.
+  Importante: esta regla solo filtra el DSM solicitante.
+  Los backups se mantienen con todos los DSM de la práctica, sujetos a disponibilidad por fechas.
+*/
+function listaDSMParaTipo(){
+ const tipo=tipoActual();
+ let base=listaPractica();
+
+ if(tipo==="Licencia de maternidad"){
+   if(practicaActual==="Development"){
+     // En Development, José no debe aparecer para maternidad.
+     return base.filter(l=>!["1030541959","1069584999"].includes(String(l.documento)));
+   }
+   if(practicaActual==="Digital Workplace"){
+     const permitidos=new Set(["53049289","1024471713","1016040506"]); // Carmen Elisa, Lady Lorena, Sandra Ximena
+     return base.filter(l=>permitidos.has(String(l.documento)));
+   }
+ }
+
+ if(tipo==="Licencia de paternidad"){
+   if(practicaActual==="Development"){
+     return base.filter(l=>["1030541959","1069584999"].includes(String(l.documento))); // José Luis y Jonathan
+   }
+   if(practicaActual==="Digital Workplace"){
+     const permitidos=new Set([
+       "80258237",   // Cristian Javier
+       "1023916112", // Eisenover
+       "N/D",        // Jamal
+       "1013599764", // Jeffer
+       "1032369426", // Jhon Paul
+       "1116236375", // Jhon Stiven
+       "93297996",   // Rafael Duvan
+       "1003540369", // Santiago
+       "1024480407"  // Wilson Fernando
+     ]);
+     return base.filter(l=>permitidos.has(String(l.documento)));
+   }
+ }
+
+ return base;
+}
+
+function cargarDSM(){
+ let d=document.getElementById("dsm");
+ const seleccionado=d.value;
+ const opciones=listaDSMParaTipo();
+ d.innerHTML="<option value=''>Seleccione DSM</option>"+opciones.map(l=>`<option value="${l.documento}">${l.nombre}</option>`).join("");
+ if(opciones.some(l=>String(l.documento)===String(seleccionado))) d.value=seleccionado;
+ onDsmChange();
+}
+function tipoActual(){
+ const checked=document.querySelector('input[name="tipoAusencia"]:checked');
+ return checked ? checked.value : "Vacaciones";
+}
+function onTipoChange(){
+ document.querySelectorAll(".type-option").forEach(opt=>{
+   const r=opt.querySelector('input[name="tipoAusencia"]');
+   opt.classList.toggle("active", !!r && r.checked);
+ });
+
+ const nuevoTipo = tipoActual();
+ const tipoAnterior = ultimoTipo || "Vacaciones";
+
+ // Si estaba editando una licencia de maternidad/paternidad y se cambia a
+ // Vacaciones o Incapacidad, limpiamos la fecha de regreso para que puedas
+ // escoger libremente otro día y otro mes sin que quede amarrada al cálculo
+ // automático de 126 o 14 días.
+ if((tipoAnterior==="Licencia de maternidad" || tipoAnterior==="Licencia de paternidad" || tipoAnterior==="Licencia de luto") &&
+    !(nuevoTipo==="Licencia de maternidad" || nuevoTipo==="Licencia de paternidad" || nuevoTipo==="Licencia de luto")){
+   clearFechaInput("fechaRegreso");
+ }
+
+ ultimoTipo = nuevoTipo;
+
+ // El saldo solo se afectará cuando el tipo sea Vacaciones.
+ // También se actualiza la lista de DSM permitidos según el tipo de ausencia.
+ cargarDSM();
+
+ if(nuevoTipo==="Licencia de maternidad" || nuevoTipo==="Licencia de paternidad" || nuevoTipo==="Licencia de luto"){
+   ajustarRegresoPorTipo();
+   onFechasChange("fechaSalida");
+ }else{
+   onFechasChange("tipoSolicitud");
+ }
+}
+
+function estaOcupado(doc,a,b,ignoreId=null){
+ // Disponibilidad para aparecer en Backup 1 o Backup 2:
+ // Un DSM NO puede aparecer como backup si en el rango seleccionado:
+ // 1) ya tiene una ausencia propia registrada: vacaciones, licencia de maternidad,
+ //    licencia de paternidad o incapacidad médica; o
+ // 2) ya está asignado como Backup 1 o Backup 2 de otra solicitud.
+ //
+ // Esto evita que una misma persona cubra a dos DSM al mismo tiempo y también
+ // evita seleccionar como backup a alguien que estará ausente.
+ if(!doc || !a || !b) return false;
+
+ return solicitudes.some(s=>{
+   if(s.id===ignoreId) return false;
+   if(!["Pendiente","Aprobado"].includes(s.estado)) return false;
+   if(!overlap(a,b,s.fecha_salida,s.fecha_regreso)) return false;
+
+   return (
+     String(s.documento_dsm)===String(doc) ||
+     String(s.documento_backup)===String(doc) ||
+     String(s.documento_backup2||"")===String(doc)
+   );
+ });
+}
+function opcionesBackup(excluir=[]){
+ const a=getFechaInput("fechaSalida");
+ const b=getFechaInput("fechaRegreso");
+ const excl=new Set(excluir.map(x=>String(x||"")).filter(Boolean));
+ let html="<option value=''>Seleccione</option>";
+ listaPractica().forEach(x=>{
+   const doc=String(x.documento);
+   // Cristian Javier Gutierrez no puede ser seleccionado como backup de nadie.
+   if(doc==="80258237") return;
+   if(excl.has(doc)) return;
+
+   // Si ya está ausente o ya está como Backup 1 / Backup 2 en un rango cruzado,
+   // NO debe aparecer en la lista. En edición se ignora la solicitud actual,
+   // pero si el backup tiene vacaciones/licencia/incapacidad en otro registro,
+   // se oculta y se obliga a elegir otro backup.
+   if(estaOcupado(doc,a,b,editingId)) return;
+
+   html+=`<option value="${doc}">${x.nombre}</option>`;
+ });
+ return html;
+}
+
+function refrescarBackups(){
+ const doc=String(document.getElementById("dsm").value || "");
+ const backup1=document.getElementById("backup");
+ const backup2=document.getElementById("backup2");
+ const prev1=backup1.value;
+ const prev2=backup2.value;
+ backup1.innerHTML=opcionesBackup([doc]);
+ if([...backup1.options].some(o=>o.value===prev1)) backup1.value=prev1;
+ const b1=String(backup1.value || "");
+ backup2.innerHTML=opcionesBackup([doc,b1]);
+ if([...backup2.options].some(o=>o.value===prev2)) backup2.value=prev2;
+}
+function onDsmChange(){
+ let doc=String(document.getElementById("dsm").value || "");
+ let l=listaPractica().find(x=>String(x.documento)===doc);
+ document.getElementById("saldo").value=l?saldo(l).toFixed(2)+" días":"";
+ refrescarBackups();
+ aplicarRegistroOtraPracticaSiExiste();
+ mostrarAvisoOtraPractica();
+}
+function onBackup1Change(){ refrescarBackups(); }
+
+function hoyISO(){
+ return fmt(new Date());
+}
+function esFechaPasada(valor){
+ if(!valor) return false;
+ return localDate(valor) < localDate(hoyISO());
+}
+function aplicarMinimosFecha(){
+ const hoy=hoyISO();
+ const salida=document.getElementById("fechaSalida");
+ const regreso=document.getElementById("fechaRegreso");
+ if(salida) salida.min=hoy;
+ if(regreso){
+   const s=salida && getFechaInput("fechaSalida") ? getFechaInput("fechaSalida") : hoy;
+   regreso.min = localDate(s) > localDate(hoy) ? s : hoy;
+ }
+}
+function esFechaSeleccionable(valor){
+ if(!valor) return true;
+ if(esFechaPasada(valor)) return false;
+ return habil(localDate(valor));
+}
+function siguienteHabil(d){
+ let x=new Date(d);
+ while(!habil(x)){x.setDate(x.getDate()+1)}
+ return x;
+}
+function addCalendarDaysInclusive(fecha, diasCalendario){
+ let x=localDate(fecha);
+ x.setDate(x.getDate()+diasCalendario-1);
+ return x;
+}
+function addBusinessDaysInclusive(fecha, diasHabiles){
+ let x=localDate(fecha);
+ let contador=0;
+ while(true){
+   if(habil(x)) contador++;
+   if(contador>=diasHabiles) break;
+   x.setDate(x.getDate()+1);
+ }
+ return x;
+}
+function ajustarRegresoPorTipo(){
+ const tipo=tipoActual();
+ const salida=document.getElementById("fechaSalida");
+ const regreso=document.getElementById("fechaRegreso");
+ const salidaIso=getFechaInput("fechaSalida");
+ if(!salidaIso) return;
+ if(tipo==="Licencia de maternidad"){
+   setFechaInput("fechaRegreso", fmt(siguienteHabil(addCalendarDaysInclusive(salidaIso,126))));
+ }
+ if(tipo==="Licencia de paternidad"){
+   setFechaInput("fechaRegreso", fmt(siguienteHabil(addCalendarDaysInclusive(salidaIso,14))));
+ }
+ if(tipo==="Licencia de luto"){
+   setFechaInput("fechaRegreso", fmt(addBusinessDaysInclusive(salidaIso,5)));
+ }
+}
+function onFechasChange(changedBy=null){
+ aplicarMinimosFecha();
+ let salida=document.getElementById("fechaSalida");
+ let regreso=document.getElementById("fechaRegreso");
+ let a=getFechaInput("fechaSalida");
+ let b=getFechaInput("fechaRegreso");
+
+ if(a && !esFechaSeleccionable(a)){
+   alert("La fecha de inicio debe ser desde hoy en adelante y en día hábil. No seleccione fechas pasadas, fines de semana ni festivos.");
+   clearFechaInput("fechaSalida");
+   clearFechaInput("fechaRegreso");
+   a=""; b="";
+ }
+
+ if(a){
+   regreso.min=a;
+   // Para maternidad/paternidad se calcula automáticamente al cambiar fecha de inicio o tipo.
+   // Si el usuario está cambiando manualmente la fecha de regreso, no la sobreescribimos.
+   if(changedBy!=="fechaRegreso"){
+     ajustarRegresoPorTipo();
+   }
+   b=getFechaInput("fechaRegreso");
+   if(b && localDate(b)<localDate(a)){
+     clearFechaInput("fechaRegreso");
+     b="";
+   }
+ }else{
+   regreso.min=hoyISO();
+ }
+
+ if(b && !esFechaSeleccionable(b)){
+   alert("La fecha de regreso debe ser desde la fecha de inicio en adelante y en día hábil. No seleccione fechas pasadas, fines de semana ni festivos.");
+   clearFechaInput("fechaRegreso");
+   b="";
+ }
+
+ let d=totalSolicitadoPorTipo(a,b);
+ const tipo=tipoActual();
+ if(tipo==="Licencia de maternidad"){
+   document.getElementById("daysTitle").textContent="Total calendario";
+   document.getElementById("daysSubtitle").textContent="Licencia de maternidad · 18 semanas";
+   document.getElementById("diasHabiles").value=d+" días calendario";
+ }else if(tipo==="Licencia de paternidad"){
+   document.getElementById("daysTitle").textContent="Total calendario";
+   document.getElementById("daysSubtitle").textContent="Licencia de paternidad · 2 semanas";
+   document.getElementById("diasHabiles").value=d+" días calendario";
+ }else if(tipo==="Licencia de luto"){
+   document.getElementById("daysTitle").textContent="Total hábil";
+   document.getElementById("daysSubtitle").textContent="Licencia de luto · 5 días hábiles";
+   document.getElementById("diasHabiles").value=d+" días hábiles";
+ }else{
+   document.getElementById("daysTitle").textContent="Total solicitado";
+   document.getElementById("daysSubtitle").textContent="No incluye sábados, domingos ni festivos Colombia";
+   document.getElementById("diasHabiles").value=d+" días hábiles";
+ }
+ document.getElementById("diasHabilesDisplay").textContent=d;
+ let fs=festivosEnRango(a,b), n=document.getElementById("holidayNotice");
+ if(fs.length){n.style.display="block";n.innerHTML="<b>Aviso:</b> el rango incluye festivo(s): "+fs.join(", ")+". No se cuentan como hábiles."}else n.style.display="none";
+ mostrarAvisoOtraPractica();
+ refrescarBackups();
+}
+function conflictos(docDsm,docBackup,docBackup2,a,b,ignoreId=null,tipoSolicitud=null){
+ // Reglas de cruce por rango de fechas:
+ //
+ // 1) El DSM solicitante no puede tener otra ausencia propia cruzada
+ //    ya sea Vacaciones, Licencia de maternidad, Licencia de paternidad
+ //    o Incapacidad médica.
+ //
+ // 2) Si el DSM solicitante está actuando como Backup 1 o Backup 2 de otra
+ //    solicitud en ese rango:
+ //    - NO puede registrar Vacaciones en ese mismo rango.
+ //    - SÍ puede registrar Licencia de maternidad, Licencia de paternidad
+ //      o Incapacidad médica.
+ //
+ // 3) Backup 1 y Backup 2 no pueden estar ocupados en ese rango:
+ //    - No pueden tener ausencia propia cruzada.
+ //    - No pueden estar ya asignados como backup de otro DSM.
+ //    Esto aplica para solicitudes de Vacaciones, Licencias e Incapacidad,
+ //    porque un DSM solo puede cubrir a 1 DSM en el mismo rango.
+ //
+ // Aplica contra solicitudes en estado Pendiente o Aprobado.
+
+ const doc = String(docDsm || "");
+ const b1 = String(docBackup || "");
+ const b2 = String(docBackup2 || "");
+ const tipo = tipoSolicitud || "Vacaciones";
+
+ return solicitudes.filter(s=>{
+   if(s.id===ignoreId) return false;
+   if(!["Pendiente","Aprobado"].includes(s.estado)) return false;
+   if(!overlap(a,b,s.fecha_salida,s.fecha_regreso)) return false;
+
+   const sDsm = String(s.documento_dsm || "");
+   const sB1 = String(s.documento_backup || "");
+   const sB2 = String(s.documento_backup2 || "");
+
+   // El DSM solicitante ya tiene una ausencia propia en ese rango.
+   if(doc && sDsm === doc) return true;
+
+   // Si el DSM solicitante está como backup de otra persona,
+   // solo se bloquea cuando está intentando pedir Vacaciones.
+   if(tipo === "Vacaciones" && doc && (sB1 === doc || sB2 === doc)) return true;
+
+   // Backup 1 no puede estar ausente ni estar cubriendo a otra persona.
+   if(b1 && (sDsm === b1 || sB1 === b1 || sB2 === b1)) return true;
+
+   // Backup 2 no puede estar ausente ni estar cubriendo a otra persona.
+   if(b2 && (sDsm === b2 || sB1 === b2 || sB2 === b2)) return true;
+
+   return false;
+ });
+}
+
+function rolCruce(s, docDsm, docBackup, docBackup2){
+ const doc = String(docDsm || "");
+ const b1 = String(docBackup || "");
+ const b2 = String(docBackup2 || "");
+ const sDsm = String(s.documento_dsm || "");
+ const sB1 = String(s.documento_backup || "");
+ const sB2 = String(s.documento_backup2 || "");
+ const partes=[];
+
+ if(doc && sDsm===doc) partes.push("el DSM solicitante ya tiene una ausencia");
+ if(doc && (sB1===doc || sB2===doc)) partes.push("el DSM solicitante ya está asignado como backup");
+
+ if(b1 && sDsm===b1) partes.push("Backup 1 está ausente en esas fechas");
+ if(b1 && (sB1===b1 || sB2===b1)) partes.push("Backup 1 ya cubre a otro DSM en esas fechas");
+
+ if(b2 && sDsm===b2) partes.push("Backup 2 está ausente en esas fechas");
+ if(b2 && (sB1===b2 || sB2===b2)) partes.push("Backup 2 ya cubre a otro DSM en esas fechas");
+
+ return partes.length ? partes.join("; ") : "cruce de fechas";
+}
+function mensajeConflictos(lista, docDsm, docBackup, docBackup2){
+ return lista.map(x=>{
+   const backups = [x.nombre_backup, x.nombre_backup2].filter(Boolean).join(" / ");
+   return `${rolCruce(x,docDsm,docBackup,docBackup2)}\n- Registro existente: ${x.nombre_dsm} (${x.fecha_salida} a ${x.fecha_regreso})${backups?` / Backups: ${backups}`:""}`;
+ }).join("\n\n");
+}
+
+function obtenerCorreoAprobador(row){
+ const practica = row.practica || "";
+ const documento = String(row.documento_dsm || "");
+
+ if(practica === "Development"){
+   return EMAIL_APROBADOR_DEVELOPMENT;
+ }
+
+ if(practica === "Digital Workplace" && documento === "80258237"){
+   return EMAIL_APROBADOR_CRISTIAN;
+ }
+
+ if(practica === "Digital Workplace"){
+   return EMAIL_APROBADOR_DIGITAL;
+ }
+
+ return EMAIL_APROBADOR_DEVELOPMENT;
+}
+
+async function enviarCorreoNuevaSolicitud(row, esEdicion=false){
+ if(!window.emailjs){
+   const msg = "EmailJS no está cargado. Revise la conexión a internet o el CDN de EmailJS.";
+   console.warn(msg);
+   return { ok:false, error:msg };
+ }
+ const esVac = esVacacionesTipo(row.tipo_ausencia);
+ const params={
+   to_email: row.notify_approval_to || obtenerCorreoAprobador(row),
+   from_name: "Planificador de Absentismo",
+   asunto: esVac
+     ? (esEdicion ? `[${row.tipo_ausencia || "Vacaciones"}] Solicitud actualizada pendiente de aprobación - ${row.nombre_dsm}` : `[${row.tipo_ausencia || "Vacaciones"}] Nueva solicitud pendiente de aprobación - ${row.nombre_dsm}`)
+     : (esEdicion ? `[${row.tipo_ausencia || "Registro"}] Registro actualizado informado - ${row.nombre_dsm}` : `[${row.tipo_ausencia || "Registro"}] Registro informado - ${row.nombre_dsm}`),
+   titulo_correo: esVac
+     ? (esEdicion ? `${row.tipo_ausencia || "Vacaciones"} · Solicitud actualizada pendiente de aprobación` : `${row.tipo_ausencia || "Vacaciones"} · Nueva solicitud pendiente de aprobación`)
+     : (esEdicion ? `${row.tipo_ausencia || "Registro"} · Registro actualizado informado` : `${row.tipo_ausencia || "Registro"} · Registro informado`),
+   nombre_dsm: row.nombre_dsm,
+   practica: row.practica,
+   fecha_salida: row.fecha_salida,
+   fecha_regreso: row.fecha_regreso,
+   dias_habiles: row.dias_habiles,
+   nombre_backup: row.nombre_backup,
+   nombre_backup2: row.nombre_backup2 || "No aplica",
+   tipo_ausencia: row.tipo_ausencia || "Vacaciones",
+   comentarios: esEdicion
+     ? (esVac ? "Esta solicitud fue editada y requiere nueva revisión.\n\nComentarios: " + (row.comentarios || "Sin comentarios")
+              : "Este registro fue actualizado e informado.\n\nComentarios: " + (row.comentarios || "Sin comentarios"))
+     : (row.comentarios || "Sin comentarios"),
+   estado: row.estado || "Pendiente",
+   url_planificador: window.location.href
+ };
+ try{
+   await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params);
+   return { ok:true, error:"" };
+ }catch(e){
+   const detalle = (e && (e.text || e.message || e.status)) ? (e.text || e.message || ("Status " + e.status)) : JSON.stringify(e);
+   console.error("Error enviando correo EmailJS:", e);
+   return { ok:false, error:detalle || "Error desconocido de EmailJS" };
+ }
+}
+function impactosBackupPorNuevaAusencia(row, ignoreId=null){
+ // Si la nueva solicitud es licencia de maternidad, licencia de paternidad
+ // o incapacidad médica, revisamos si ese DSM estaba asignado como Backup 1
+ // o Backup 2 de otra solicitud en fechas cruzadas.
+ //
+ // En ese caso se permite registrar la licencia/incapacidad, pero se envía
+ // una alerta para reasignar backup del DSM que queda sin cobertura.
+ const tipo = row.tipo_ausencia || "Vacaciones";
+ if(tipo === "Vacaciones") return [];
+
+ const doc = String(row.documento_dsm || "");
+ if(!doc) return [];
+
+ return solicitudes.filter(s=>{
+   if(s.id===ignoreId) return false;
+   if(!["Pendiente","Aprobado"].includes(s.estado)) return false;
+   if(!overlap(row.fecha_salida,row.fecha_regreso,s.fecha_salida,s.fecha_regreso)) return false;
+
+   const b1 = String(s.documento_backup || "");
+   const b2 = String(s.documento_backup2 || "");
+
+   return b1 === doc || b2 === doc;
+ }).map(s=>({
+   solicitud:s,
+   rol:String(s.documento_backup||"")===doc ? "Backup 1" : "Backup 2"
+ }));
+}
+
+async function enviarCorreoBackupAfectado(rowNueva, impacto){
+ const solicitudBase = impacto.solicitud;
+ const rol = impacto.rol;
+
+ const mensaje = 
+`ALERTA: reasignar backup. El DSM ${rowNueva.nombre_dsm} estaba asignado como ${rol} de ${solicitudBase.nombre_dsm}, pero registró ${rowNueva.tipo_ausencia} con cruce de fechas.
+
+Solicitud que queda en riesgo de cobertura:
+DSM: ${solicitudBase.nombre_dsm}
+Tipo: ${solicitudBase.tipo_ausencia || "Vacaciones"}
+Fechas: ${isoToDisplay(solicitudBase.fecha_salida)} a ${isoToDisplay(solicitudBase.fecha_regreso)}
+Backup 1 actual: ${solicitudBase.nombre_backup || "No asignado"}
+Backup 2 actual: ${solicitudBase.nombre_backup2 || "No aplica"}
+
+Nueva novedad del backup:
+DSM: ${rowNueva.nombre_dsm}
+Tipo: ${rowNueva.tipo_ausencia}
+Fechas: ${isoToDisplay(rowNueva.fecha_salida)} a ${isoToDisplay(rowNueva.fecha_regreso)}
+
+Acción requerida: reasignar un nuevo backup para ${solicitudBase.nombre_dsm}, de lo contrario sus servicios podrían quedar sin gestión.`;
+
+ const params={
+   to_email: obtenerCorreoAprobador(solicitudBase),
+   from_name: "Planificador de Absentismo",
+   asunto: `ALERTA: reasignar backup por ${rowNueva.tipo_ausencia} - ${solicitudBase.nombre_dsm}`,
+   titulo_correo: `ALERTA: se requiere reasignar backup · ${rowNueva.tipo_ausencia}`,
+   nombre_dsm: `Reasignar backup para ${solicitudBase.nombre_dsm}`,
+   practica: solicitudBase.practica,
+   fecha_salida: solicitudBase.fecha_salida,
+   fecha_regreso: solicitudBase.fecha_regreso,
+   dias_habiles: solicitudBase.dias_habiles,
+   nombre_backup: solicitudBase.nombre_backup,
+   nombre_backup2: solicitudBase.nombre_backup2 || "No aplica",
+   tipo_ausencia: "ALERTA: backup no disponible",
+   comentarios: mensaje,
+   estado: "Reasignar backup",
+   url_planificador: window.location.href
+ };
+
+ try{
+   await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params);
+   return {ok:true,error:""};
+ }catch(e){
+   const detalle = (e && (e.text || e.message || e.status)) ? (e.text || e.message || ("Status " + e.status)) : JSON.stringify(e);
+   console.error("Error enviando alerta de backup afectado:", e);
+   return {ok:false,error:detalle || "Error desconocido de EmailJS"};
+ }
+}
+
+async function enviarAlertasBackupAfectado(rowNueva, ignoreId=null){
+ const impactos = impactosBackupPorNuevaAusencia(rowNueva, ignoreId);
+ if(!impactos.length) return {total:0,enviados:0,errores:[]};
+
+ let enviados=0;
+ let errores=[];
+ for(const impacto of impactos){
+   const r = await enviarCorreoBackupAfectado(rowNueva, impacto);
+   if(r.ok) enviados++;
+   else errores.push(r.error);
+ }
+ return {total:impactos.length,enviados,errores};
+}
+
+
+
+async function registrar(){
+ const dsmSelect = document.getElementById("dsm");
+ const backupSelect = document.getElementById("backup");
+ const backup2Select = document.getElementById("backup2");
+ const fechaSalidaInput = document.getElementById("fechaSalida");
+ const fechaRegresoInput = document.getElementById("fechaRegreso");
+ const diasInput = document.getElementById("diasHabiles");
+ const comentariosInput = document.getElementById("comentarios");
+
+ // IMPORTANTE: capturamos los valores ANTES de sincronizar con Supabase.
+ // Si se sincroniza primero, el formulario se puede redibujar y perder el backup seleccionado.
+ const doc = String(dsmSelect.value || "");
+ const back = String(backupSelect.value || "");
+ const back2 = String(backup2Select.value || "");
+ const tipo = tipoActual();
+ const a = getFechaInput("fechaSalida");
+ const b = getFechaInput("fechaRegreso");
+ const dias = totalSolicitadoPorTipo(a,b);
+
+ if(!doc){alert("Seleccione el DSM.");return}
+ if(!a || !b){alert("Seleccione fecha de salida y fecha de regreso.");return}
+ if(!esFechaSeleccionable(a) || !esFechaSeleccionable(b)){alert("Seleccione solo días hábiles para fecha de inicio y regreso.");return}
+ if(dias<=0){alert("El rango seleccionado no tiene días hábiles. Revise fines de semana o festivos.");return}
+ if(!back){alert("Seleccione Backup 1.");return}
+ if(back2 && back2===back){alert("Backup 2 debe ser diferente al Backup 1.");return}
+ if(back2 && back2===doc){alert("Backup 2 no puede ser el mismo DSM solicitante.");return}
+
+ let l=listaPractica().find(x=>String(x.documento)===doc);
+ let bk=listaPractica().find(x=>String(x.documento)===back);
+ let bk2=back2?listaPractica().find(x=>String(x.documento)===back2):null;
+ if(!l){alert("No se encontró el DSM seleccionado. Vuelva a seleccionarlo.");return}
+ if(!bk){alert("No se encontró el Backup 1 seleccionado. Vuelva a seleccionarlo.");return}
+ if(back2 && !bk2){alert("No se encontró el Backup 2 seleccionado. Vuelva a seleccionarlo.");return}
+
+ // Ahora sí sincronizamos para validar cruces contra la información más reciente.
+ await cargar();
+
+ if(tipo==="Vacaciones"){
+   if(!crossPracticeLocked){
+     const crucesOtraPractica=vacacionesMismaPersonaOtraPractica(l,a,b,editingId);
+     if(crucesOtraPractica.length){
+       alert("No se puede registrar. Este DSM ya tiene vacaciones reportadas en otra práctica para fechas cruzadas:\n\n"+
+         crucesOtraPractica.map(x=>`${x.practica}: ${isoToDisplay(x.fecha_salida)} a ${isoToDisplay(x.fecha_regreso)} (${x.estado})`).join("\n"));
+       return;
+     }
+   }
+
+ }
+
+ let c=conflictos(doc,back,back2,a,b,editingId,tipo);
+ if(c.length){alert("No se puede registrar. Hay cruce de fechas:\n\n"+mensajeConflictos(c,doc,back,back2));return}
+
+ const row={tipo_ausencia:tipo,practica:practicaActual,documento_dsm:String(l.documento),nombre_dsm:l.nombre,fecha_salida:a,fecha_regreso:b,dias_habiles:dias,documento_backup:String(bk.documento),nombre_backup:bk.nombre,documento_backup2:bk2?String(bk2.documento):null,nombre_backup2:bk2?bk2.nombre:null,estado:esVacacionesTipo(tipo)?"Pendiente":"Aprobado",comentarios:comentariosInput.value||"",notify_approval_to:obtenerCorreoAprobador({practica:practicaActual,documento_dsm:String(l.documento)}),approval_email_sent:false,reminder_7_days_sent:false};
+ const esEdicion = !!editingId;
+ let insertado=null, error=null;
+ if(editingId){
+   const resp=await db.from(TABLE).update({...row,updated_at:new Date().toISOString(),approval_email_sent:false}).eq("id",editingId).select().single();
+   insertado=resp.data; error=resp.error;
+ }else{
+   const resp=await db.from(TABLE).insert(row).select().single();
+   insertado=resp.data; error=resp.error;
+ }
+ if(error){alert("No fue posible guardar en Supabase: "+error.message);return}
+
+ const resultadoCorreo = await enviarCorreoNuevaSolicitud(row, esEdicion);
+ const emailEnviado = resultadoCorreo.ok;
+ if(emailEnviado && insertado && insertado.id){
+   await db.from(TABLE).update({approval_email_sent:true}).eq("id", insertado.id);
+ }
+ if(!emailEnviado){
+   console.warn("Detalle EmailJS:", resultadoCorreo.error);
+ }
+
+ // Si quien registra licencia/incapacidad era backup de otro DSM en fechas cruzadas,
+ // se envía alerta para que reasignen backup a la solicitud afectada.
+ const resultadoAlertasBackup = await enviarAlertasBackupAfectado(row, editingId);
+ if(resultadoAlertasBackup.errores.length){
+   console.warn("Errores enviando alertas de backup afectado:", resultadoAlertasBackup.errores);
+ }
+
+ clearFechaInput("fechaSalida");
+ clearFechaInput("fechaRegreso");
+ aplicarMinimosFecha();
+ diasInput.value="0 días hábiles";
+ document.getElementById("diasHabilesDisplay").textContent="0";
+ document.getElementById("daysTitle").textContent="Total solicitado";
+ document.getElementById("daysSubtitle").textContent="No incluye sábados, domingos ni festivos Colombia";
+ comentariosInput.value="";
+ bloquearCamposPorOtraPractica(null);
+ setTipoAusencia("Vacaciones");
+ document.getElementById("dsm").value="";
+ desactivarModoEdicion();
+ document.getElementById("holidayNotice").style.display="none";
+ cargarDSM();
+ document.getElementById("backup").innerHTML="<option value=''>Seleccione</option>";
+ document.getElementById("backup2").innerHTML="<option value=''>Seleccione</option>";
+ await cargar();
+ let mensajeFinal = emailEnviado 
+   ? (esEdicion ? "Solicitud actualizada y correo de actualización enviado." : "Solicitud guardada y correo enviado.")
+   : ((esEdicion ? "Solicitud actualizada" : "Solicitud guardada") + ", pero NO se pudo enviar el correo. Detalle EmailJS: " + resultadoCorreo.error);
+ if(resultadoAlertasBackup.total>0){
+   mensajeFinal += "\n\nAlerta de backup afectado: " + resultadoAlertasBackup.enviados + " de " + resultadoAlertasBackup.total + " correo(s) enviado(s).";
+ }
+ alert(mensajeFinal);
+}
+
+function setTipoAusencia(valor){
+ const v=valor || "Vacaciones";
+ const radios=[...document.querySelectorAll('input[name="tipoAusencia"]')];
+ radios.forEach(r=>{ r.checked=false; });
+ const input=document.querySelector(`input[name="tipoAusencia"][value="${v}"]`) || document.querySelector('input[name="tipoAusencia"][value="Vacaciones"]');
+ if(input) input.checked=true;
+ ultimoTipo = (input && input.value) ? input.value : "Vacaciones";
+ document.querySelectorAll(".type-option").forEach(opt=>{
+   const r=opt.querySelector('input[name="tipoAusencia"]');
+   opt.classList.toggle("active", !!r && r.checked);
+ });
+}
+function activarModoEdicion(){
+ document.getElementById("submitBtn").textContent="Guardar cambios";
+ document.getElementById("cancelEditBtn").style.display="block";
+ document.getElementById("editBanner").style.display="block";
+ document.getElementById("editBanner").innerHTML="Modo edición activo. Ajusta la información necesaria y guarda los cambios.";
+}
+function desactivarModoEdicion(){
+ editingId=null;
+ editingBackup1Original="";
+ editingBackup2Original="";
+ document.getElementById("submitBtn").textContent="Registrar solicitud";
+ document.getElementById("cancelEditBtn").style.display="none";
+ document.getElementById("editBanner").style.display="none";
+ document.getElementById("editBanner").innerHTML="";
+}
+
+function cancelarEdicion(){
+ desactivarModoEdicion();
+ clearFechaInput("fechaSalida");
+ clearFechaInput("fechaRegreso");
+ document.getElementById("comentarios").value="";
+ document.getElementById("diasHabiles").value="0 días hábiles";
+ document.getElementById("diasHabilesDisplay").textContent="0";
+ bloquearCamposPorOtraPractica(null);
+ setTipoAusencia("Vacaciones");
+ document.getElementById("dsm").value="";
+ cargarDSM();
+ document.getElementById("backup").innerHTML="<option value=''>Seleccione</option>";
+ document.getElementById("backup2").innerHTML="<option value=''>Seleccione</option>";
+}
+function editar(id){
+ bloquearCamposPorOtraPractica(null);
+ const s=solicitudes.find(x=>x.id===id);
+ if(!s) return;
+ editingId=id;
+ editingBackup1Original=String(s.documento_backup||"");
+ editingBackup2Original=String(s.documento_backup2||"");
+ setTipoAusencia(s.tipo_ausencia || "Vacaciones");
+ cargarDSM();
+ document.getElementById("dsm").value=String(s.documento_dsm);
+ setFechaInput("fechaSalida", s.fecha_salida);
+ setFechaInput("fechaRegreso", s.fecha_regreso);
+ document.getElementById("comentarios").value=s.comentarios || "";
+ onFechasChange();
+ onDsmChange();
+ document.getElementById("backup").value=String(s.documento_backup||"");
+ onBackup1Change();
+ if(s.documento_backup2) document.getElementById("backup2").value=String(s.documento_backup2);
+ activarModoEdicion();
+ activarTab("cal");
+ document.querySelector("aside.card").scrollIntoView({behavior:"smooth",block:"start"});
+}
+async function estado(id, nuevo){
+ await cargar(); 
+ let s=solicitudes.find(x=>x.id===id); 
+ if(!s)return;
+ if(!esVacacionesTipo(s.tipo_ausencia) && nuevo==="Rechazado"){
+   alert("Las licencias e incapacidades no se rechazan. Quedan registradas como aprobadas.");
+   return;
+ }
+ if(!esVacacionesTipo(s.tipo_ausencia) && nuevo==="Pendiente"){
+   alert("Las licencias e incapacidades no requieren reapertura para aprobación. Si necesitas corregirlas, usa Editar.");
+   return;
+ }
+ if(["Pendiente","Aprobado"].includes(nuevo)){
+   let c=conflictos(s.documento_dsm,s.documento_backup,s.documento_backup2,s.fecha_salida,s.fecha_regreso,id,(s.tipo_ausencia||"Vacaciones")); 
+   if(c.length){alert("No se puede cambiar estado. Hay cruce con otra solicitud:\n\n"+mensajeConflictos(c,s.documento_dsm,s.documento_backup,s.documento_backup2));return}
+ }
+ const {error}=await db.from(TABLE).update({estado:nuevo,updated_at:new Date().toISOString()}).eq("id",id);
+ if(error){alert("Error actualizando: "+error.message);return}
+ let local=solicitudes.find(x=>x.id===id);
+ if(local){local.estado=nuevo;local.updated_at=new Date().toISOString();}
+ solTabActual=nuevo;
+ render();
+ await cargar();
+ activarTab("sol");
+}
+async function eliminar(id){if(!confirm("¿Eliminar solicitud?"))return;const {error}=await db.from(TABLE).delete().eq("id",id);if(error)alert(error.message);await cargar()}
+
+function irSolicitudesEstado(estado){
+ activarTab("sol");
+ activarSolTab(estado);
+}
+
+function activarSolTab(t){
+ solTabActual=t;
+ render();
+}
+
+function activarTab(t){document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.dataset.tab===t));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));document.getElementById("panel-"+t).classList.add("active")}
+function mes(n){calDate.setMonth(calDate.getMonth()+n);renderCal()}
+function render(){
+ let sol=solicitudes.filter(s=>s.practica===practicaActual);
+ const pendientesCount=sol.filter(s=>s.estado==="Pendiente").length;
+ kPend.textContent=pendientesCount;
+ if(document.getElementById("tabPendCount")) tabPendCount.textContent=pendientesCount;
+ kAprob.textContent=sol.filter(s=>s.estado==="Aprobado").length;
+ let alertas=listaPractica().map(l=>({...l,s:saldo(l)})).filter(x=>x.s>15);
+ kAlert.textContent=alertas.length;
+
+ if(document.getElementById("countPend")){
+   countPend.textContent=sol.filter(s=>s.estado==="Pendiente").length;
+   countAprob.textContent=sol.filter(s=>s.estado==="Aprobado").length;
+   countRech.textContent=sol.filter(s=>s.estado==="Rechazado").length;
+   document.querySelectorAll(".sol-subtab").forEach(b=>b.classList.toggle("active", b.dataset.soltab===solTabActual));
+ }
+
+ let solFiltradas=sol.filter(s=>s.estado===solTabActual);
+ solRows.innerHTML=solFiltradas.length ? solFiltradas.map(s=>{
+  let acciones="";
+  if(!esVacacionesTipo(s.tipo_ausencia)){
+    acciones=`<div class="actions"><span class="state-pill state-ok">✓ Registrada</span><button class="btn edit" onclick="editar('${s.id}')">Editar</button><button class="btn secondary" onclick="eliminar('${s.id}')">Eliminar</button></div>`;
+  }else if(s.estado==="Pendiente"){
+    acciones=`<div class="actions"><button class="btn edit" onclick="editar('${s.id}')">Editar</button><button class="btn ok" onclick="estado('${s.id}','Aprobado')">Aprobar</button><button class="btn danger" onclick="estado('${s.id}','Rechazado')">Rechazar</button><button class="btn secondary" onclick="eliminar('${s.id}')">Eliminar</button></div>`;
+  }else if(s.estado==="Aprobado"){
+    acciones=`<div class="actions"><span class="state-pill state-ok">✓ Aprobada</span><button class="btn edit" onclick="editar('${s.id}')">Editar</button><button class="btn warn" onclick="estado('${s.id}','Pendiente')">Reabrir</button><button class="btn secondary" onclick="eliminar('${s.id}')">Eliminar</button></div>`;
+  }else{
+    acciones=`<div class="actions"><span class="state-pill state-no">Rechazada</span><button class="btn warn" onclick="estado('${s.id}','Pendiente')">Reabrir</button><button class="btn secondary" onclick="eliminar('${s.id}')">Eliminar</button></div>`;
+  }
+  return `<tr>
+    <td><b>${s.tipo_ausencia || "Vacaciones"}</b></td>
+    <td>${s.nombre_dsm}</td>
+    <td class="date-cell"><span class="date-line"><span class="date-label">Inicia</span>${isoToDisplay(s.fecha_salida)}</span><span class="date-line"><span class="date-label">Regresa</span>${isoToDisplay(s.fecha_regreso)}</span></td>
+    <td>${s.dias_habiles}</td>
+    <td><b>Backup 1:</b> ${s.nombre_backup || ""}${s.nombre_backup2?`<br><b>Backup 2:</b> ${s.nombre_backup2}`:""}</td>
+    <td><span class="status ${s.estado}">${s.estado}</span></td>
+    <td>${acciones}</td>
+  </tr>`;
+ }).join("") : `<tr><td colspan="7"><div class="empty-state">No hay solicitudes en estado ${solTabActual}.</div></td></tr>`;
+
+ saldoRows.innerHTML=listaPractica().map(l=>`<tr><td>${l.documento}</td><td>${l.nombre}</td><td><b>${saldo(l).toFixed(2)}</b></td></tr>`).join("");
+ alertRows.innerHTML=alertas.length?alertas.map(a=>`<div class="alert-row"><b>${a.nombre}</b><br>Documento: ${a.documento}<br>Saldo actual: <b>${a.s.toFixed(2)} días</b><br>Requiere plan de disfrute.</div>`).join(""):"<p style='color:#64748b'>No hay DSM con más de 15 días.</p>";
+ renderCal();
+}
+function tipoCorto(tipo){
+ const t=tipo || "Vacaciones";
+ if(t==="Vacaciones") return "Vac";
+ if(t==="Licencia de maternidad") return "Mat";
+ if(t==="Licencia de paternidad") return "Pat";
+ if(t==="Incapacidad médica") return "Med";
+ if(t==="Licencia de luto") return "Luto";
+ return t.split(" ")[0];
+}
+
+function nombreFestivoCorto(date){
+ const nombre = festivosNombres[date] || "Festivo";
+ const cortos = {
+   "Nuestra Señora del Rosario de Chiquinquirá":"Chiquinquirá",
+   "Independencia Cartagena":"Ind. Cartagena",
+   "Sagrado Corazón":"Sagrado Corazón",
+   "Batalla Boyacá":"Batalla Boyacá",
+   "Todos los Santos":"Todos Santos"
+ };
+ return cortos[nombre] || nombre;
+}
+
+function mostrarFestivo(date){
+ alert("Festivo - " + (festivosNombres[date] || "Festivo"));
+}
+
+function renderCal(){
+ let y=calDate.getFullYear(),m=calDate.getMonth();
+ calTitle.textContent=calDate.toLocaleDateString("es-CO",{month:"long"}).replace(/^./,c=>c.toUpperCase())+" "+y;
+ let first=new Date(y,m,1), start=(first.getDay()+6)%7, days=new Date(y,m+1,0).getDate();
+ let names=["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"], html=names.map(n=>`<div class="dayname">${n}</div>`).join("");
+ for(let i=0;i<start;i++)html+="<div></div>";
+
+ let solAprobadas=solicitudes.filter(s=>s.practica===practicaActual && s.estado==="Aprobado");
+
+ for(let d=1;d<=days;d++){
+   let date=fmt(new Date(y,m,d));
+   let dt=localDate(date);
+   let hol=festivos.has(date);
+   let weekend=dt.getDay()===0 || dt.getDay()===6;
+
+   // Solo se pintan vacaciones aprobadas en días hábiles.
+   let items=(!weekend && !hol) ? solAprobadas.filter(s=>localDate(s.fecha_salida)<=dt&&dt<=localDate(s.fecha_regreso)) : [];
+   let hasApproved=items.length>0;
+   let visibles=items.slice(0,2);
+   let ocultos=items.length-visibles.length;
+
+   html+=`<div class="day ${weekend?'weekend':''} ${hol?'holiday':''} ${hasApproved?'has-approved':''}">
+     <div class="num">${d}</div>
+     ${hol?`<div class="holiday-name" onclick="mostrarFestivo('${date}')" title="Festivo - ${festivosNombres[date] || 'Festivo'}">Festivo</div>`:""}
+     ${visibles.map(s=>`<div class="vac approved" title="${s.tipo_ausencia||'Vacaciones'} · ${s.nombre_dsm} · Backup 1: ${s.nombre_backup || ''}${s.nombre_backup2?' · Backup 2: '+s.nombre_backup2:''}"><span class="vac-type">${tipoCorto(s.tipo_ausencia)}</span><span class="vac-name">${s.nombre_dsm.split(" ").slice(0,2).join(" ")}</span></div>`).join("")}
+     ${ocultos>0?`<div class="more-vac">+${ocultos} más</div>`:""}
+   </div>`;
+ }
+ calendar.innerHTML=html;
+}
+document.addEventListener("DOMContentLoaded", function(){
+  aplicarMinimosFecha();
+  const fs=document.getElementById("fechaSalida");
+  const fr=document.getElementById("fechaRegreso");
+  if(fs){
+    fs.addEventListener("focus", function(){ aplicarMinimosFecha(); openDate(fs); });
+    fs.addEventListener("input", function(){ onFechasChange("fechaSalida"); }); 
+    fs.addEventListener("blur", function(){ onFechasChange("fechaSalida"); });
+  }
+  if(fr){
+    fr.addEventListener("focus", function(){ aplicarMinimosFecha(); const fsIso=getFechaInput("fechaSalida"); if(fsIso){ fr.min=fsIso; } openDate(fr); });
+    fr.addEventListener("input", function(){ onFechasChange("fechaRegreso"); }); 
+    fr.addEventListener("blur", function(){ onFechasChange("fechaRegreso"); });
+  }
+});
+init();
+</script>
+</body>
+</html>
