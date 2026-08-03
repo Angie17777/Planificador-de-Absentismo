@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ping Supabase</title>
+</head>
+<body>
+  <h1>Ping Supabase</h1>
+  <p id="status">Ejecutando ping...</p>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script> const SUPABASE_URL = "https://uuligswbxflpnhaqjtuh.supabase.co/rest/v1/"; const SUPABASE_ANON_KEY = "sb_publishable_gI0--qCFH_aMyRVerGgB-w__4Cn-PAG"; const supabaseClient = window.supabase.createClient( SUPABASE_URL, SUPABASE_ANON_KEY ); async function hacerPing() { const status = document.getElementById("status"); try { const { data, error } = await supabaseClient .from("vacaciones_dsm") .select("*") .limit(1); if (error) { status.textContent = "Error en ping: " + error.message; console.error(error); return; } status.textContent = "Ping correcto. Supabase respondió."; console.log(data); } catch (err) { status.textContent = "Error de conexión con Supabase."; console.error(err); } } hacerPing(); </script>
+</body>
+</html>
