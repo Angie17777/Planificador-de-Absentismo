@@ -1,0 +1,14 @@
+name: Supabase Keepalive
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */12 * * *"
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Supabase
+        run: | echo "Ping a Supabase" curl -I "https://buwqlkqpxgdtaqhlymfe.supabase.co" echo "Fin del ping"
