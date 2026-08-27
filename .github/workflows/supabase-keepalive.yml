@@ -3,18 +3,20 @@ name: Supabase Keepalive
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */12 * * *'
+    - cron: "0 */12 * * *"
 
 jobs:
-  ping-supabase:
+  ping:
     runs-on: ubuntu-latest
 
     steps:
       - name: Ping Supabase
         env:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: | echo "Haciendo ping a Supabase" 
+        run: | echo "Haciendo ping a Supabase..." 
           curl -i -X GET "https://buwqlkqpxgdtaqhlymfe.supabase.co/rest/v1/vacaciones_dsm?select=id&limit=1" \
-            -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
             -H "Content-Type: application/json"
+
+          echo "Ping terminado"
