@@ -1,33 +1,20 @@
 name: Supabase Keepalive
 
 on:
-  schedule:
-    # Se ejecuta cada 12 horas automáticamente
-    - cron: "0 */12 * * *"
-
-  # Esto permite ejecutarlo manualmente desde GitHub
   workflow_dispatch:
+  schedule:
+    - cron: '0 */12 * * *'
 
 jobs:
   ping-supabase:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Ping Supabase REST API
-        run: | echo "Haciendo ping a Supabase..." 
-          response=$(curl -sS -w "%{http_code}" -o response.txt -X GET \
-            "https://uuligswbxflpnhaqjtuh.supabase.co/rest/v1/vacaciones_dsm?select=id&limit=1" \
-            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -H "Content-Type: application/json")
-
-          echo "Código HTTP: $response"
-          echo "Respuesta:"
-          cat response.txt
-
-          if [ "$response" -ge 200 ] && [ "$response" -lt 300 ]; then
-            echo "Ping OK"
-          else
-            echo "Ping falló"
-            exit 1
-          fi
+      - name: Ping Supabase
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: | echo "Haciendo ping a Supabase" 
+          curl -i -X GET "https://buwqlkqpxgdtaqhlymfe.supabase.co/rest/v1/vacaciones_dsm?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Content-Type: application/json"
