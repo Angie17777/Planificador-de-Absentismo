@@ -11,4 +11,7 @@ jobs:
 
     steps:
       - name: Ping Supabase
-        run: | echo "Ping a Supabase" curl -I "https://buwqlkqpxgdtaqhlymfe.supabase.co" echo "Fin del ping"
+        run: | 
+        echo "Ping a Supabase" 
+        curl -I "https://buwqlkqpxgdtaqhlymfe.supabase.co" 
+        echo "Fin del ping"
